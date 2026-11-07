@@ -1,145 +1,1001 @@
-/* TeraShip demo application. All courier integrations and rates are simulated. */
+/* TeraShip application — Supabase-backed customer and shipment records.
+   Courier prices, AWBs, labels and tracking remain illustrative until real
+   courier APIs/contracts are connected. Never place a Supabase service-role key here. */
 (() => {
-  const $ = (s, root=document) => root.querySelector(s);
-  const $$ = (s, root=document) => [...root.querySelectorAll(s)];
-  const money = n => new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR',maximumFractionDigits:0}).format(Number(n||0));
-  const date = d => new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+  'use strict';
+
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => [...root.querySelectorAll(s)];
+  const money = n => new Intl.NumberFormat('en-IN', {
+    style: 'currency', currency: 'INR', maximumFractionDigits: 0
+  }).format(Number(n || 0));
+  const date = d => d ? new Date(d).toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric'
+  }) : '—';
   const nowISO = () => new Date().toISOString();
-  const escapeHtml = v => String(v ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const couriers = [
-    {name:'Blue Dart',code:'BD',color:'#eaf0ff',base:88,eta:'1–2 days'},
-    {name:'DTDC',code:'DT',color:'#fff0e6',base:68,eta:'2–4 days'},
-    {name:'Delhivery',code:'DL',color:'#e7f7ef',base:62,eta:'2–3 days'},
-    {name:'XpressBees',code:'XB',color:'#fff4d8',base:59,eta:'2–4 days'},
-    {name:'Ecom Express',code:'EC',color:'#f3eaff',base:64,eta:'2–4 days'},
-    {name:'India Post',code:'IP',color:'#e4f6f7',base:48,eta:'3–6 days'}
-  ];
-  const seedCustomers = [
-    {id:'CUS-1001',name:'Aarav Retail Pvt. Ltd.',contact:'Rohan Mehta',phone:'9876543210',email:'ops@aaravretail.example',city:'Ranchi',shipments:38,balance:12450},
-    {id:'CUS-1002',name:'Nova Fashion Store',contact:'Sana Khan',phone:'9123456780',email:'sana@novafashion.example',city:'Jamshedpur',shipments:24,balance:6800},
-    {id:'CUS-1003',name:'TechNest Electronics',contact:'Amit Verma',phone:'9988776655',email:'dispatch@technest.example',city:'Patna',shipments:17,balance:0},
-    {id:'CUS-1004',name:'GreenLeaf Organics',contact:'Priya Singh',phone:'9090909090',email:'orders@greenleaf.example',city:'Dhanbad',shipments:12,balance:2300}
-  ];
-  const seedShipments = [
-    {id:'SHP-260101',awb:'TSDEMO100001',customerId:'CUS-1001',customer:'Aarav Retail Pvt. Ltd.',sender:'Aarav Retail Pvt. Ltd.',senderPhone:'9876543210',senderCity:'Ranchi',receiver:'Ananya Das',receiverPhone:'9122200011',receiverCity:'Kolkata',receiverPin:'700001',weight:1.2,service:'Prepaid',amount:145,cod:0,courier:'Blue Dart',status:'In Transit',created:daysAgo(1),eta:'1–2 days',timeline:[['Shipment booked','Shipment created in TeraShip demo',daysAgo(1)],['Picked up','Parcel picked up by simulated courier',daysAgo(1)],['In Transit','Shipment moving through demo network',nowISO()]]},
-    {id:'SHP-260102',awb:'TSDEMO100002',customerId:'CUS-1002',customer:'Nova Fashion Store',sender:'Nova Fashion Store',senderPhone:'9123456780',senderCity:'Jamshedpur',receiver:'Ritika Sharma',receiverPhone:'9876500123',receiverCity:'Delhi',receiverPin:'110001',weight:0.8,service:'COD',amount:118,cod:1299,courier:'Delhivery',status:'Out for Delivery',created:daysAgo(2),eta:'Today',timeline:[['Shipment booked','Shipment created in TeraShip demo',daysAgo(2)],['Picked up','Parcel picked up by simulated courier',daysAgo(2)],['In Transit','Reached destination hub (simulated)',daysAgo(1)],['Out for Delivery','Courier agent assigned (simulated)',nowISO()]]},
-    {id:'SHP-260103',awb:'TSDEMO100003',customerId:'CUS-1001',customer:'Aarav Retail Pvt. Ltd.',sender:'Aarav Retail Pvt. Ltd.',senderPhone:'9876543210',senderCity:'Ranchi',receiver:'Vivek Kumar',receiverPhone:'9898989898',receiverCity:'Bhubaneswar',receiverPin:'751001',weight:2.5,service:'Prepaid',amount:192,cod:0,courier:'DTDC',status:'Delivered',created:daysAgo(4),eta:'Delivered',timeline:[['Shipment booked','Shipment created in TeraShip demo',daysAgo(4)],['Picked up','Parcel picked up by simulated courier',daysAgo(4)],['In Transit','Reached destination hub (simulated)',daysAgo(3)],['Delivered','Delivery recorded in demo system',daysAgo(2)]]},
-    {id:'SHP-260104',awb:'TSDEMO100004',customerId:'CUS-1003',customer:'TechNest Electronics',sender:'TechNest Electronics',senderPhone:'9988776655',senderCity:'Patna',receiver:'Rahul Jain',receiverPhone:'9811112222',receiverCity:'Lucknow',receiverPin:'226001',weight:1.0,service:'COD',amount:132,cod:2499,courier:'XpressBees',status:'Booked',created:daysAgo(0),eta:'2–4 days',timeline:[['Shipment booked','Shipment created in TeraShip demo',nowISO()]]},
-    {id:'SHP-260105',awb:'TSDEMO100005',customerId:'CUS-1004',customer:'GreenLeaf Organics',sender:'GreenLeaf Organics',senderPhone:'9090909090',senderCity:'Dhanbad',receiver:'Meera Roy',receiverPhone:'9000001111',receiverCity:'Varanasi',receiverPin:'221001',weight:0.5,service:'Prepaid',amount:98,cod:0,courier:'India Post',status:'Delivered',created:daysAgo(6),eta:'Delivered',timeline:[['Shipment booked','Shipment created in TeraShip demo',daysAgo(6)],['Picked up','Parcel accepted at demo counter',daysAgo(6)],['Delivered','Delivery recorded in demo system',daysAgo(3)]]}
-  ];
-  function daysAgo(n){return new Date(Date.now()-n*86400000).toISOString()}
-  const state = {
-    page:'dashboard', selectedCourier:'Blue Dart', selectedRate:null,
-    customers:load('teraship_customers',seedCustomers),
-    shipments:load('teraship_shipments',seedShipments),
-    invoices:load('teraship_invoices',[
-      {id:'INV-26001',customer:'Aarav Retail Pvt. Ltd.',date:daysAgo(1),amount:5510,status:'Unpaid',shipments:12},
-      {id:'INV-26002',customer:'Nova Fashion Store',date:daysAgo(3),amount:3240,status:'Paid',shipments:8},
-      {id:'INV-26003',customer:'TechNest Electronics',date:daysAgo(5),amount:1890,status:'Unpaid',shipments:5}
-    ]),
-    trackingQuery:''
+  const escapeHtml = v => String(v ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+  const rateGuide = {
+    'Blue Dart': { code: 'BD', color: '#eaf0ff', base: 88, eta: '1–2 days' },
+    'DTDC': { code: 'DT', color: '#fff0e6', base: 68, eta: '2–4 days' },
+    'Delhivery': { code: 'DL', color: '#e7f7ef', base: 62, eta: '2–3 days' },
+    'XpressBees': { code: 'XB', color: '#fff4d8', base: 59, eta: '2–4 days' },
+    'Ecom Express': { code: 'EC', color: '#f3eaff', base: 64, eta: '2–4 days' },
+    'India Post': { code: 'IP', color: '#e4f6f7', base: 48, eta: '3–6 days' }
   };
-  function load(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback}catch{return fallback}}
-  function save(){localStorage.setItem('teraship_shipments',JSON.stringify(state.shipments));localStorage.setItem('teraship_customers',JSON.stringify(state.customers));localStorage.setItem('teraship_invoices',JSON.stringify(state.invoices))}
-  const total = arr => arr.reduce((s,x)=>s+Number(x||0),0);
-  const delivered = () => state.shipments.filter(s=>s.status==='Delivered').length;
-  const inTransit = () => state.shipments.filter(s=>['In Transit','Out for Delivery'].includes(s.status)).length;
-  const todayCount = () => state.shipments.filter(s=>new Date(s.created).toDateString()===new Date().toDateString()).length;
-  const statusClass = status => ({'Delivered':'delivered','In Transit':'transit','Out for Delivery':'transit','Booked':'booked','Pending':'pending','Exception':'exception','Cancelled':'cancelled'})[status]||'pending';
-  const badge = s => `<span class="badge ${statusClass(s)}">${escapeHtml(s)}</span>`;
-  const pageTitles={dashboard:'Dashboard',shipments:'Shipments',booking:'Book a shipment',tracking:'Track shipment',customers:'Customers',billing:'Billing & COD',reports:'Reports',settings:'Settings & integrations'};
-  function heading(title,desc,actions=''){return `<div class="page-heading"><div><div class="eyebrow">TERASHIP WORKSPACE</div><h1>${title}</h1><p>${desc}</p></div><div class="heading-actions">${actions}</div></div>`}
-  function stat(label,value,note,icon){return `<article class="stat-card"><div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div><div class="stat-value">${value}</div><div class="stat-note">${note}</div></article>`}
-  function shipmentRows(list){if(!list.length)return `<tr><td colspan="8"><div class="empty-state"><b>No shipments found</b>Try another search or book a new shipment.</div></td></tr>`;
-    return list.map(s=>`<tr><td><span class="mono">${escapeHtml(s.awb)}</span><br><small class="muted">${escapeHtml(s.id)}</small></td><td><b>${escapeHtml(s.customer)}</b><br><small class="muted">${escapeHtml(s.receiverCity)}</small></td><td>${escapeHtml(s.courier)}</td><td>${s.weight} kg</td><td>${s.service==='COD'?money(s.cod):'Prepaid'}</td><td>${badge(s.status)}</td><td>${date(s.created)}</td><td><button class="button small" data-action="track" data-awb="${escapeHtml(s.awb)}">View</button></td></tr>`).join('')}
-  function recentTable(list=state.shipments.slice(0,5)){return `<div class="panel table-panel"><div class="panel-head"><div><h2>Recent shipments</h2><p>Latest activity across your courier network</p></div><button class="text-link" data-page="shipments">View all shipments →</button></div><div class="table-wrap"><table><thead><tr><th>AWB / Shipment</th><th>Customer / Destination</th><th>Courier</th><th>Weight</th><th>Payment</th><th>Status</th><th>Booked</th><th>Action</th></tr></thead><tbody>${shipmentRows(list)}</tbody></table></div></div>`}
-  function dashboard(){
-    const max=Math.max(1,...[18,24,17,29,22,32,27].map(n=>n));
-    const bars=[18,24,17,29,22,32,27];
-    const chart=bars.map((n,i)=>`<div class="bar-group"><div class="bar secondary" style="height:${n/max*72}%"></div><div class="bar" style="height:${Math.max(8,(n+7)/max*100)}%"></div><span class="bar-label">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][i]}</span></div>`).join('');
-    const courierRows=couriers.map(c=>{const count=state.shipments.filter(s=>s.courier===c.name).length;return `<div class="courier-row"><div class="courier-logo" style="background:${c.color}">${c.code}</div><div class="courier-info"><b>${c.name}</b><small>${c.eta} typical demo estimate</small></div><div class="courier-count">${count}<small>shipments</small></div></div>`}).join('');
-    return heading('Good day, Admin 👋','Here’s what is happening across your multi-courier network today.',`<button class="button" data-action="export">↓ Export data</button><button class="button primary" data-page="booking">＋ Book shipment</button>`)
-    +`<div class="grid stats-grid">${stat('Total shipments',state.shipments.length,'Across all demo courier partners','▤')}${stat('In transit',inTransit(),'Includes out for delivery','↗')}${stat('Delivered',delivered(),`${state.shipments.length?Math.round(delivered()/state.shipments.length*100):0}% of recorded shipments`,'✓')}${stat('COD to reconcile',money(total(state.shipments.filter(s=>s.service==='COD'&&s.status==='Delivered').map(s=>s.cod))),'Delivered COD · simulated','₹')}</div>
-    <div class="grid dashboard-grid"><section class="panel"><div class="panel-head"><div><h2>Shipment activity</h2><p>Illustrative weekly booking volume</p></div><div class="chart-legend"><span>Bookings</span><span>Delivered</span></div></div><div class="bar-chart">${chart}</div></section><section class="panel"><div class="panel-head"><div><h2>Courier performance</h2><p>Shipment distribution by partner</p></div><button class="text-link" data-page="settings">Manage →</button></div><div class="courier-list">${courierRows}</div></section></div>${recentTable()}`;
+
+  const db = window.supabaseClient;
+  const authUser = window.terashipUser;
+  const profile = window.terashipProfile;
+
+  const state = {
+    page: 'dashboard',
+    selectedCourierId: '',
+    selectedRate: null,
+    customers: [],
+    shipments: [],
+    couriers: [],
+    invoices: [],
+    trackingQuery: '',
+    loading: true
+  };
+
+  const pageTitles = {
+    dashboard: 'Dashboard', shipments: 'Shipments', booking: 'Book a shipment',
+    tracking: 'Track shipment', customers: 'Customers', billing: 'Billing & COD',
+    reports: 'Reports', settings: 'Settings & integrations'
+  };
+
+  function toast(message) {
+    const t = $('#toast');
+    if (!t) { alert(message); return; }
+    t.textContent = message;
+    t.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove('show'), 3200);
   }
-  function shipmentsPage(){return heading('Shipments','Search, filter and manage every shipment from one portal.',`<button class="button" data-action="export">↓ Export CSV</button><button class="button primary" data-page="booking">＋ New shipment</button>`)+`<div class="toolbar"><div class="searchbox"><span>⌕</span><input id="shipmentSearch" placeholder="Search AWB, customer or destination…"></div><select id="statusFilter"><option value="">All statuses</option>${['Booked','In Transit','Out for Delivery','Delivered','Exception','Cancelled'].map(s=>`<option>${s}</option>`).join('')}</select><select id="courierFilter"><option value="">All couriers</option>${couriers.map(c=>`<option>${c.name}</option>`).join('')}</select></div><div id="shipmentTable">${recentTable(state.shipments)}</div>`}
-  function customerOptions(){return state.customers.map(c=>`<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')}
-  function bookingPage(){return heading('Book a shipment','Create a shipment record and compare illustrative courier rates. No real booking will be sent.',`<button class="button" data-action="resetBooking">Reset form</button>`)+`
-  <form id="bookingForm"><div class="booking-layout"><div>
-  <section class="form-section"><h2>01 · Customer & shipment type</h2><div class="form-fields">
-  <div class="field"><label for="customerId">Customer account *</label><select id="customerId" required>${customerOptions()}</select></div>
-  <div class="field"><label for="serviceType">Payment type *</label><select id="serviceType"><option>Prepaid</option><option>COD</option></select></div>
-  <div class="field"><label for="weight">Actual weight (kg) *</label><input id="weight" type="number" min=".1" step=".1" value="1" required></div>
-  <div class="field"><label for="dimensions">Dimensions (cm)</label><input id="dimensions" placeholder="e.g. 20 × 15 × 10"></div>
-  <div class="field"><label for="declaredValue">Declared value (₹)</label><input id="declaredValue" type="number" min="0" value="1000"></div>
-  <div class="field" id="codField"><label for="codAmount">COD amount (₹)</label><input id="codAmount" type="number" min="0" value="0"></div>
-  </div></section>
-  <section class="form-section"><h2>02 · Sender details</h2><div class="form-fields">
-  <div class="field"><label for="senderName">Sender / business name *</label><input id="senderName" required placeholder="Business name"></div><div class="field"><label for="senderPhone">Sender mobile *</label><input id="senderPhone" required inputmode="numeric" placeholder="10-digit mobile"></div>
-  <div class="field"><label for="senderCity">Pickup city *</label><input id="senderCity" required placeholder="e.g. Ranchi"></div><div class="field"><label for="senderPin">Pickup PIN code</label><input id="senderPin" inputmode="numeric" maxlength="6" placeholder="834001"></div>
-  </div></section>
-  <section class="form-section"><h2>03 · Receiver details</h2><div class="form-fields">
-  <div class="field"><label for="receiverName">Receiver name *</label><input id="receiverName" required placeholder="Full name"></div><div class="field"><label for="receiverPhone">Receiver mobile *</label><input id="receiverPhone" required inputmode="numeric" placeholder="10-digit mobile"></div>
-  <div class="field"><label for="receiverCity">Destination city *</label><input id="receiverCity" required placeholder="e.g. Kolkata"></div><div class="field"><label for="receiverPin">Destination PIN code *</label><input id="receiverPin" required inputmode="numeric" maxlength="6" placeholder="700001"></div>
-  <div class="field full"><label for="receiverAddress">Full delivery address *</label><textarea id="receiverAddress" required placeholder="House / street / landmark / area"></textarea></div>
-  <div class="field full"><label for="notes">Shipment notes (optional)</label><input id="notes" placeholder="Fragile, handling notes, reference"></div>
-  </div></section>
-  <div class="callout warning">Demo notice: booking creates a local sample record and a DEMO AWB only. It does not request a pickup, create a real courier label or transfer COD.</div>
-  </div><aside class="panel rate-panel"><div class="panel-head"><div><h2>04 · Compare courier rates</h2><p>Sample prices for presentation only</p></div></div><div id="rateOptions"></div><div class="field" style="margin:13px 0"><label for="customerCharge">Customer charge (₹)</label><input id="customerCharge" type="number" min="0" value="149"><small>Set your selling price. Actual courier cost must come from your agreement.</small></div><div class="callout">Rates are illustrative, not live quotes. Serviceability, volumetric weight, fuel surcharges, GST and remote-area fees are not checked.</div><button class="button primary" style="width:100%;margin-top:14px" type="submit">Create demo shipment →</button></aside></div></form>`}
-  function trackingPage(){return heading('Track a shipment','Look up a demo AWB to see its simulated tracking timeline.')+`<div class="panel"><div class="panel-head"><div><h2>Shipment tracking</h2><p>Try TSDEMO100001 or select one of the sample tracking numbers.</p></div></div><form id="trackingForm" class="tracking-search"><input id="trackingInput" value="${escapeHtml(state.trackingQuery)}" placeholder="Enter AWB / tracking number" required><button class="button primary">Track shipment</button><button type="button" class="button" data-action="sampleTracking">Use sample AWB</button></form><div id="trackingResult" class="tracking-result">${state.trackingQuery?renderTracking(state.trackingQuery):'<div class="empty-state"><b>Enter an AWB to begin</b>Tracking updates in this demo are simulated.</div>'}</div></div>`}
-  function renderTracking(query){const s=state.shipments.find(x=>x.awb.toLowerCase()===query.toLowerCase()||x.id.toLowerCase()===query.toLowerCase());if(!s)return `<div class="empty-state"><b>No matching demo shipment</b>Check the AWB and try again.</div>`;
-    const timeline=s.timeline||[];return `<div class="tracking-summary"><div><div class="eyebrow">${escapeHtml(s.courier)} · SIMULATED TRACKING</div><h2>${escapeHtml(s.awb)}</h2><p class="muted" style="margin:0;font-size:11px">${escapeHtml(s.senderCity)} → ${escapeHtml(s.receiverCity)} · ${s.weight} kg</p></div><div>${badge(s.status)}</div></div><div class="timeline">${timeline.map((t,i)=>`<div class="timeline-item ${i===timeline.length-1?'':'future'}"><span class="timeline-dot"></span><div><b>${escapeHtml(t[0])}</b><small>${escapeHtml(t[1])}</small><small>${new Date(t[2]).toLocaleString('en-IN')}</small></div></div>`).join('')}</div><div class="callout warning">This tracking timeline is generated by the demo and is not sourced from ${escapeHtml(s.courier)}.</div><div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap"><button class="button" data-action="label" data-awb="${escapeHtml(s.awb)}">Print sample label</button><button class="button" data-action="advance" data-awb="${escapeHtml(s.awb)}">Advance demo status</button></div>`}
-  function customersPage(){return heading('Customer accounts','Manage retailer accounts, contact details, balances and shipping activity.',`<button class="button primary" data-action="addCustomer">＋ Add customer</button>`)+`<div class="grid customer-grid">${state.customers.map(c=>`<article class="customer-card"><div class="customer-card-top"><div class="customer-avatar">${escapeHtml(c.name.split(' ').slice(0,2).map(x=>x[0]).join(''))}</div><div><h3>${escapeHtml(c.name)}</h3><small>${escapeHtml(c.id)} · ${escapeHtml(c.city)}</small></div></div><div style="font-size:11px;color:#58657d;line-height:1.9">${escapeHtml(c.contact)}<br>${escapeHtml(c.phone)}<br>${escapeHtml(c.email)}</div><div class="customer-metrics"><div><b>${state.shipments.filter(s=>s.customerId===c.id).length}</b><span>Demo shipments</span></div><div><b>${money(c.balance)}</b><span>Account balance</span></div></div><div style="display:flex;gap:8px;margin-top:13px"><button class="button small" data-action="customerDetails" data-id="${c.id}">View account</button><button class="button small" data-action="customerStatement" data-id="${c.id}">Statement CSV</button></div></article>`).join('')}</div>`}
-  function billingPage(){const cod=total(state.shipments.filter(s=>s.service==='COD').map(s=>s.cod));const deliveredCOD=total(state.shipments.filter(s=>s.service==='COD'&&s.status==='Delivered').map(s=>s.cod));const unpaid=total(state.invoices.filter(i=>i.status!=='Paid').map(i=>i.amount));return heading('Billing & COD','Review customer invoices, COD collections and simulated remittance balances.',`<button class="button" data-action="exportInvoices">↓ Export invoices</button><button class="button primary" data-action="createInvoice">＋ Create invoice</button>`)+`<div class="grid billing-grid"><div class="billing-stat"><span>Total COD value</span><b>${money(cod)}</b><small>All COD demo shipments</small></div><div class="billing-stat"><span>Delivered COD</span><b>${money(deliveredCOD)}</b><small>Illustrative collection amount</small></div><div class="billing-stat"><span>Unpaid invoices</span><b>${money(unpaid)}</b><small>Customer receivables (demo)</small></div></div>
-  <div class="panel table-panel" style="margin-bottom:17px"><div class="panel-head"><div><h2>Customer invoices</h2><p>Sample invoice register</p></div></div><div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Customer</th><th>Date</th><th>Shipments</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody>${state.invoices.map(i=>`<tr><td class="mono">${escapeHtml(i.id)}</td><td><b>${escapeHtml(i.customer)}</b></td><td>${date(i.date)}</td><td>${i.shipments}</td><td><b>${money(i.amount)}</b></td><td><span class="badge ${i.status==='Paid'?'delivered':'pending'}">${i.status}</span></td><td><button class="button small" data-action="invoiceToggle" data-id="${i.id}">${i.status==='Paid'?'Mark unpaid':'Mark paid'}</button></td></tr>`).join('')}</tbody></table></div></div>
-  <div class="panel table-panel"><div class="panel-head"><div><h2>COD shipment register</h2><p>COD amounts are demo values and do not represent actual collections.</p></div></div><div class="table-wrap"><table><thead><tr><th>AWB</th><th>Customer</th><th>Courier</th><th>COD amount</th><th>Shipment status</th><th>Reconciliation</th></tr></thead><tbody>${state.shipments.filter(s=>s.service==='COD').map(s=>`<tr><td class="mono">${s.awb}</td><td>${escapeHtml(s.customer)}</td><td>${escapeHtml(s.courier)}</td><td>${money(s.cod)}</td><td>${badge(s.status)}</td><td>${s.status==='Delivered'?'<span class="badge delivered">Demo delivered</span>':'<span class="badge pending">Awaiting delivery</span>'}</td></tr>`).join('')||'<tr><td colspan="6">No COD shipments yet.</td></tr>'}</tbody></table></div></div>`}
-  function reportsPage(){return heading('Reports & exports','Download sample operating reports for your client presentation.')+`<div class="grid report-grid"><article class="report-card"><div class="stat-icon">▤</div><h3>Shipment register</h3><p>All shipments, AWBs, couriers, destinations, charges and statuses.</p><button class="button" data-action="export">Download CSV →</button></article><article class="report-card"><div class="stat-icon">₹</div><h3>COD report</h3><p>COD amount, courier, customer and simulated delivery state.</p><button class="button" data-action="exportCOD">Download CSV →</button></article><article class="report-card"><div class="stat-icon">♙</div><h3>Customer directory</h3><p>Customer accounts, contacts, shipment count and balances.</p><button class="button" data-action="exportCustomers">Download CSV →</button></article><article class="report-card"><div class="stat-icon">▥</div><h3>Courier performance</h3><p>Shipment count by courier partner and current status.</p><button class="button" data-action="exportCourier">Download CSV →</button></article><article class="report-card"><div class="stat-icon">▧</div><h3>Invoice register</h3><p>Customer invoices, payment status and billed totals.</p><button class="button" data-action="exportInvoices">Download CSV →</button></article><article class="report-card"><div class="stat-icon">↻</div><h3>Reset demo data</h3><p>Restore the original sample records for another demonstration.</p><button class="button danger" data-action="resetDemo">Reset demo data</button></article></div><div class="callout warning">CSV files contain demo records only. Do not use these sample reports for actual accounting, GST filings or courier reconciliation.</div>`}
-  function settingsPage(){return heading('Settings & integrations','Prepare the portal for authorized carrier API connections and future branding changes.')+`<div class="grid settings-grid"><section class="panel"><div class="panel-head"><div><h2>Courier connections</h2><p>Demo connections are simulated only</p></div></div><div class="courier-list">${couriers.map(c=>`<div class="integration-card"><div class="courier-logo" style="background:${c.color}">${c.code}</div><div><b>${c.name}</b><small>API credentials not configured</small></div><div class="integration-status"><span class="badge pending">Demo mode</span></div></div>`).join('')}</div></section><section class="panel"><div class="panel-head"><div><h2>Portal branding</h2><p>Customize the presentation brand locally</p></div></div><form id="brandingForm"><div class="field" style="margin-bottom:13px"><label for="brandName">Portal name</label><input id="brandName" value="TeraShip"></div><div class="field" style="margin-bottom:13px"><label for="brandCompany">Company line</label><input id="brandCompany" value="by TeraSyncTech"></div><div class="field" style="margin-bottom:15px"><label for="brandAccent">Accent color</label><select id="brandAccent"><option value="#3867e8">Blue (default)</option><option value="#16806a">Emerald</option><option value="#6f42c1">Violet</option><option value="#d06a25">Orange</option></select></div><button class="button primary">Apply demo branding</button></form><hr style="border:0;border-top:1px solid var(--line);margin:22px 0"><h2 style="font-size:13px">Production checklist</h2><ul style="padding-left:18px;color:#65728a;font-size:11px;line-height:2"><li>Secure backend and database</li><li>Admin, branch and customer authentication</li><li>Carrier contracts and API credentials</li><li>Live rates, serviceability and label APIs</li><li>Webhook-based tracking updates</li><li>Audit logs, backups and privacy controls</li></ul></section></div><div class="callout warning" style="margin-top:16px">Never publish API keys or customer personal data in this public GitHub repository. Store credentials server-side in environment variables or a secrets manager.</div>`}
-  function render(){const content=$('#pageContent');const pages={dashboard,shipments:shipmentsPage,booking:bookingPage,tracking:trackingPage,customers:customersPage,billing:billingPage,reports:reportsPage,settings:settingsPage};content.innerHTML=(pages[state.page]||dashboard)();$('#pageCrumb').textContent=pageTitles[state.page]||'Dashboard';$$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));$('#sidebar').classList.remove('open');if(state.page==='booking'){populateCustomer();renderRates()}if(state.page==='shipments')bindShipmentFilters();if(state.page==='booking')bindBooking();if(state.page==='tracking')bindTracking();if(state.page==='settings')bindBranding();}
-  function populateCustomer(){const c=state.customers[0];if(!c)return;$('#senderName').value=c.name;$('#senderPhone').value=c.phone;$('#senderCity').value=c.city;$('#customerCharge').value=149}
-  function calculateRate(c){const w=Math.max(.1,Number($('#weight')?.value||1));return Math.round(c.base+Math.max(0,Math.ceil(w)-1)*24+ (c.name==='Blue Dart'?25:0))}
-  function renderRates(){const box=$('#rateOptions');if(!box)return;const rates=couriers.map(c=>({...c,rate:calculateRate(c)})).sort((a,b)=>a.rate-b.rate);if(!state.selectedRate||!rates.some(r=>r.name===state.selectedRate))state.selectedRate=rates[0].name;box.innerHTML=rates.map(c=>`<div class="rate-card ${state.selectedRate===c.name?'selected':''}" data-rate="${c.name}"><div><b><span class="radio-dot"></span>${c.name}</b><small>Est. ${c.eta} · sample rate</small></div><div class="rate-price">${money(c.rate)}<small>demo cost</small></div></div>`).join('');const chosen=rates.find(c=>c.name===state.selectedRate);if($('#customerCharge')&&!$('#customerCharge').dataset.edited)$('#customerCharge').value=Math.round(chosen.rate*1.35)}
-  function bindBooking(){const form=$('#bookingForm');$('#weight').addEventListener('input',()=>{state.selectedRate=null;renderRates()});$('#serviceType').addEventListener('change',()=>{$('#codField').style.opacity=$('#serviceType').value==='COD'?'1':'.5';if($('#serviceType').value!=='COD')$('#codAmount').value=0});$('#customerCharge').addEventListener('input',e=>e.target.dataset.edited='1');$('#rateOptions').addEventListener('click',e=>{const card=e.target.closest('[data-rate]');if(!card)return;state.selectedRate=card.dataset.rate;renderRates()});form.addEventListener('submit',e=>{e.preventDefault();const v=id=>$('#'+id).value.trim();const cust=state.customers.find(c=>c.id===v('customerId'));if(!cust){toast('Add a customer account first.');return}const awb='TSDEMO'+String(Date.now()).slice(-8);const id='SHP-'+String(Date.now()).slice(-6);const courier=state.selectedRate||couriers[0].name;const amount=Number(v('customerCharge'))||0;const service=v('serviceType');const s={id,awb,customerId:cust.id,customer:cust.name,sender:v('senderName'),senderPhone:v('senderPhone'),senderCity:v('senderCity'),senderPin:v('senderPin'),receiver:v('receiverName'),receiverPhone:v('receiverPhone'),receiverCity:v('receiverCity'),receiverPin:v('receiverPin'),receiverAddress:v('receiverAddress'),weight:Number(v('weight')),dimensions:v('dimensions'),declaredValue:Number(v('declaredValue')),service,amount,cod:service==='COD'?Number(v('codAmount')):0,courier,status:'Booked',created:nowISO(),eta:couriers.find(c=>c.name===courier).eta,timeline:[['Shipment booked','Created locally in TeraShip demo',nowISO()]]};state.shipments.unshift(s);cust.shipments=(cust.shipments||0)+1;save();showLabel(s);toast('Demo shipment created: '+awb);});}
-  function bindShipmentFilters(){const update=()=>{const q=($('#shipmentSearch')?.value||'').toLowerCase();const st=$('#statusFilter')?.value||'';const co=$('#courierFilter')?.value||'';const list=state.shipments.filter(s=>(`${s.awb} ${s.id} ${s.customer} ${s.receiverCity}`.toLowerCase().includes(q))&&(!st||s.status===st)&&(!co||s.courier===co));$('#shipmentTable').innerHTML=recentTable(list)};['shipmentSearch','statusFilter','courierFilter'].forEach(id=>$('#'+id)?.addEventListener('input',update));}
-  function bindTracking(){$('#trackingForm').addEventListener('submit',e=>{e.preventDefault();state.trackingQuery=$('#trackingInput').value.trim();$('#trackingResult').innerHTML=renderTracking(state.trackingQuery)})}
-  function bindBranding(){$('#brandingForm').addEventListener('submit',e=>{e.preventDefault();const name=$('#brandName').value.trim()||'TeraShip';const company=$('#brandCompany').value.trim()||'by TeraSyncTech';$('.brand strong').textContent=name;$('.brand small').textContent=company;document.documentElement.style.setProperty('--blue',$('#brandAccent').value);document.documentElement.style.setProperty('--blue2',hexToRgba($('#brandAccent').value,.11));toast('Demo branding updated in this browser.')})}
-  function hexToRgba(hex,a){const h=hex.replace('#','');return `rgba(${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)},${a})`}
-  function showLabel(s){$('#modalTitle').textContent='Sample shipping label';$('#modalBody').innerHTML=`<div class="callout warning" style="margin-bottom:13px">SAMPLE LABEL — NOT VALID FOR COURIER HANDOVER</div>${labelHtml(s)}<div style="display:flex;gap:8px;margin-top:15px" class="no-print"><button class="button primary" id="printLabel">Print label</button><button class="button" id="closeLabel">Close</button></div>`;openModal();$('#printLabel').onclick=()=>{const w=window.open('','_blank','width=800,height=800');if(!w){toast('Allow pop-ups to print the sample label.');return}w.document.write(`<!doctype html><html><head><title>DEMO label ${escapeHtml(s.awb)}</title><style>body{font:13px Arial;padding:24px}.label-sheet{border:1px dashed #777;padding:20px;max-width:500px;margin:auto}.label-brand{display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:10px}.label-awb{font: bold 22px monospace}.label-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0}.label-grid b{display:block;font-size:11px}.label-grid span{font-size:12px}.barcode{height:48px;background:repeating-linear-gradient(90deg,#111 0,#111 2px,white 2px,white 4px,#111 4px,#111 5px,white 5px,white 8px);margin:15px 0}.label-foot{display:flex;justify-content:space-between;font-size:10px}@page{size:A6;margin:8mm}</style></head><body>${labelHtml(s)}<script>window.onload=()=>window.print()<\/script></body></html>`);w.document.close()};$('#closeLabel').onclick=closeModal}
-  function labelHtml(s){return `<div class="label-sheet"><div class="label-brand"><div><b>TeraShip</b><div style="font-size:9px">by TeraSyncTech · DEMO</div></div><div style="text-align:right"><b>${escapeHtml(s.courier)}</b><div style="font-size:9px">SAMPLE LABEL ONLY</div></div></div><div style="font-size:9px;color:#555">DEMO AWB</div><div class="label-awb">${escapeHtml(s.awb)}</div><div class="label-grid"><div><b>SHIP FROM</b><span>${escapeHtml(s.sender)}<br>${escapeHtml(s.senderCity)} ${escapeHtml(s.senderPin||'')}</span></div><div><b>SHIP TO</b><span>${escapeHtml(s.receiver)}<br>${escapeHtml(s.receiverAddress||s.receiverCity)}<br>${escapeHtml(s.receiverCity)} ${escapeHtml(s.receiverPin||'')}<br>${escapeHtml(s.receiverPhone)}</span></div></div><hr style="border:0;border-top:1px solid #ddd"><div style="display:flex;justify-content:space-between;font-size:11px"><span>Weight: ${s.weight} kg</span><span>Payment: ${escapeHtml(s.service)}</span><span>COD: ${money(s.cod)}</span></div><div class="barcode"></div><div class="label-foot"><span>Generated ${date(s.created)}</span><span>NOT VALID FOR SHIPPING</span></div></div>`}
-  function openModal(){$('#modalBackdrop').classList.remove('hidden')}
-  function closeModal(){$('#modalBackdrop').classList.add('hidden')}
-  function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),2800)}
-  function download(name,rows){const csv=rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);toast('CSV export prepared.')}
-  function exportShipments(list=state.shipments){download('teraship-demo-shipments.csv',[['AWB','Shipment ID','Customer','Courier','Sender city','Receiver','Destination city','PIN','Weight kg','Payment type','Charge INR','COD INR','Status','Booked at'],...list.map(s=>[s.awb,s.id,s.customer,s.courier,s.senderCity,s.receiver,s.receiverCity,s.receiverPin,s.weight,s.service,s.amount,s.cod,s.status,s.created])])}
-  function exportCOD(){download('teraship-demo-cod.csv',[['AWB','Customer','Courier','COD INR','Status','Demo reconciliation'],...state.shipments.filter(s=>s.service==='COD').map(s=>[s.awb,s.customer,s.courier,s.cod,s.status,s.status==='Delivered'?'Delivered in demo':'Awaiting delivery'])])}
-  function exportCustomers(){download('teraship-demo-customers.csv',[['Customer ID','Name','Contact','Phone','Email','City','Shipments','Balance INR'],...state.customers.map(c=>[c.id,c.name,c.contact,c.phone,c.email,c.city,state.shipments.filter(s=>s.customerId===c.id).length,c.balance])])}
-  function exportCourier(){download('teraship-demo-courier-performance.csv',[['Courier','Shipments','Booked','In Transit','Out for Delivery','Delivered'],...couriers.map(c=>[c.name,state.shipments.filter(s=>s.courier===c.name).length,...['Booked','In Transit','Out for Delivery','Delivered'].map(st=>state.shipments.filter(s=>s.courier===c.name&&s.status===st).length)])])}
-  function exportInvoices(){download('teraship-demo-invoices.csv',[['Invoice ID','Customer','Date','Shipments','Amount INR','Status'],...state.invoices.map(i=>[i.id,i.customer,i.date,i.shipments,i.amount,i.status])])}
-  function addCustomer(){ $('#modalTitle').textContent='Add customer account';$('#modalBody').innerHTML=`<form id="customerForm"><div class="form-fields"><div class="field"><label>Business name *</label><input id="newName" required></div><div class="field"><label>Contact person</label><input id="newContact"></div><div class="field"><label>Mobile number *</label><input id="newPhone" required></div><div class="field"><label>Email</label><input id="newEmail" type="email"></div><div class="field"><label>City *</label><input id="newCity" required></div></div><div style="margin-top:18px;display:flex;gap:8px"><button class="button primary">Create account</button><button class="button" type="button" id="cancelCustomer">Cancel</button></div></form>`;openModal();$('#cancelCustomer').onclick=closeModal;$('#customerForm').onsubmit=e=>{e.preventDefault();const name=$('#newName').value.trim();const c={id:'CUS-'+Date.now().toString().slice(-6),name,contact:$('#newContact').value.trim(),phone:$('#newPhone').value.trim(),email:$('#newEmail').value.trim(),city:$('#newCity').value.trim(),shipments:0,balance:0};state.customers.push(c);save();closeModal();render();toast('Customer account added.')}}
-  function customerDetails(id){const c=state.customers.find(x=>x.id===id);if(!c)return;const ss=state.shipments.filter(s=>s.customerId===id);$('#modalTitle').textContent=c.name;$('#modalBody').innerHTML=`<div class="grid billing-grid"><div class="billing-stat"><span>Shipments</span><b>${ss.length}</b></div><div class="billing-stat"><span>Account balance</span><b>${money(c.balance)}</b></div><div class="billing-stat"><span>Delivered</span><b>${ss.filter(s=>s.status==='Delivered').length}</b></div></div><p><b>Contact:</b> ${escapeHtml(c.contact)}<br><b>Phone:</b> ${escapeHtml(c.phone)}<br><b>Email:</b> ${escapeHtml(c.email)}<br><b>City:</b> ${escapeHtml(c.city)}</p><h3 style="font-size:13px">Recent shipments</h3><div class="table-wrap"><table><thead><tr><th>AWB</th><th>Courier</th><th>Status</th></tr></thead><tbody>${ss.map(s=>`<tr><td class="mono">${s.awb}</td><td>${s.courier}</td><td>${badge(s.status)}</td></tr>`).join('')||'<tr><td colspan="3">No shipments yet</td></tr>'}</tbody></table></div>`;openModal()}
-  function advanceStatus(awb){const s=state.shipments.find(x=>x.awb===awb);if(!s)return;const sequence=['Booked','In Transit','Out for Delivery','Delivered'];let i=sequence.indexOf(s.status);if(i<0)i=0;s.status=sequence[Math.min(i+1,sequence.length-1)];const msg={'In Transit':'Shipment moving through demo network','Out for Delivery':'Courier agent assigned (simulated)','Delivered':'Delivery recorded in demo system'}[s.status]||'Shipment booked in demo';s.timeline.push([s.status,msg,nowISO()]);save();if(state.page==='tracking')$('#trackingResult').innerHTML=renderTracking(awb);else render();toast('Demo status updated: '+s.status)}
-  function createInvoice(){const customers=state.customers.map(c=>`<option>${escapeHtml(c.name)}</option>`).join('');$('#modalTitle').textContent='Create demo invoice';$('#modalBody').innerHTML=`<form id="invoiceForm"><div class="field" style="margin-bottom:13px"><label>Customer</label><select id="invoiceCustomer">${customers}</select></div><div class="field" style="margin-bottom:13px"><label>Number of shipments</label><input id="invoiceShipments" type="number" min="1" value="1" required></div><div class="field" style="margin-bottom:13px"><label>Invoice amount (₹)</label><input id="invoiceAmount" type="number" min="1" value="500" required></div><button class="button primary">Create invoice</button></form>`;openModal();$('#invoiceForm').onsubmit=e=>{e.preventDefault();state.invoices.unshift({id:'INV-'+Date.now().toString().slice(-6),customer:$('#invoiceCustomer').value,date:nowISO(),amount:Number($('#invoiceAmount').value),status:'Unpaid',shipments:Number($('#invoiceShipments').value)});save();closeModal();render();toast('Demo invoice created.')}}
-  function resetDemo(){if(!confirm('Restore original sample data? Your local demo changes will be lost.'))return;state.customers=JSON.parse(JSON.stringify(seedCustomers));state.shipments=JSON.parse(JSON.stringify(seedShipments));state.invoices=[{id:'INV-26001',customer:'Aarav Retail Pvt. Ltd.',date:daysAgo(1),amount:5510,status:'Unpaid',shipments:12},{id:'INV-26002',customer:'Nova Fashion Store',date:daysAgo(3),amount:3240,status:'Paid',shipments:8},{id:'INV-26003',customer:'TechNest Electronics',date:daysAgo(5),amount:1890,status:'Unpaid',shipments:5}];save();render();toast('Demo data reset.')}
-  document.addEventListener('click',e=>{
-    const page=e.target.closest('[data-page]');if(page){state.page=page.dataset.page;render();return}
-    const action=e.target.closest('[data-action]');if(!action)return;const a=action.dataset.action;
-    if(a==='export')exportShipments();if(a==='exportCOD')exportCOD();if(a==='exportCustomers')exportCustomers();if(a==='exportCourier')exportCourier();if(a==='exportInvoices')exportInvoices();
-    if(a==='track'){state.trackingQuery=action.dataset.awb;state.page='tracking';render();return}
-    if(a==='label'){const s=state.shipments.find(x=>x.awb===action.dataset.awb);if(s)showLabel(s)}
-    if(a==='advance')advanceStatus(action.dataset.awb);
-    if(a==='sampleTracking'){const s=state.shipments[0];$('#trackingInput').value=s.awb;state.trackingQuery=s.awb;$('#trackingResult').innerHTML=renderTracking(s.awb)}
-    if(a==='addCustomer')addCustomer();
-    if(a==='customerDetails')customerDetails(action.dataset.id);
-    if(a==='customerStatement'){const c=state.customers.find(x=>x.id===action.dataset.id);const ss=state.shipments.filter(s=>s.customerId===c.id);download(`${c.id}-statement-demo.csv`,[['AWB','Date','Courier','Destination','Charge INR','COD INR','Status'],...ss.map(s=>[s.awb,s.created,s.courier,s.receiverCity,s.amount,s.cod,s.status])])}
-    if(a==='invoiceToggle'){const i=state.invoices.find(x=>x.id===action.dataset.id);if(i){i.status=i.status==='Paid'?'Unpaid':'Paid';save();render();toast('Invoice status updated in demo.')}}
-    if(a==='createInvoice')createInvoice();if(a==='resetDemo')resetDemo();
-    if(a==='resetBooking'){state.selectedRate=null;render();toast('Booking form reset.')}
+
+  function showError(prefix, error) {
+    console.error(prefix, error);
+    toast(`${prefix}: ${error?.message || 'Please try again.'}`);
+  }
+
+  function statusClass(status) {
+    return ({
+      'Delivered': 'delivered', 'In Transit': 'transit',
+      'Out for Delivery': 'transit', 'Booked': 'booked',
+      'Pending': 'pending', 'Exception': 'exception',
+      'Cancelled': 'cancelled'
+    })[status] || 'pending';
+  }
+  const badge = s => `<span class="badge ${statusClass(s)}">${escapeHtml(s || 'Pending')}</span>`;
+  const total = arr => arr.reduce((sum, x) => sum + Number(x || 0), 0);
+  const delivered = () => state.shipments.filter(s => s.status === 'Delivered').length;
+  const inTransit = () => state.shipments.filter(s => ['In Transit', 'Out for Delivery'].includes(s.status)).length;
+  const todayCount = () => state.shipments.filter(s =>
+    s.created && new Date(s.created).toDateString() === new Date().toDateString()).length;
+
+  function normalizeCustomer(row) {
+    return {
+      id: row.id, name: row.name || '', contact: row.name || '',
+      phone: row.phone || '', email: row.email || '',
+      city: row.city || '', address: row.address || '',
+      state: row.state || '', pincode: row.pincode || '',
+      balance: 0
+    };
+  }
+
+  function normalizeShipment(row) {
+    const customer = state.customers.find(c => c.id === row.customer_id);
+    const courier = state.couriers.find(c => c.id === row.courier_id);
+    return {
+      id: row.id,
+      awb: row.awb_number || '',
+      customerId: row.customer_id,
+      customer: customer?.name || 'Customer record unavailable',
+      sender: row.sender_name || '',
+      senderPhone: row.sender_phone || '',
+      senderCity: row.sender_address || '',
+      senderPin: row.sender_pincode || '',
+      receiver: row.receiver_name || '',
+      receiverPhone: row.receiver_phone || '',
+      receiverCity: row.receiver_city || '',
+      receiverPin: row.receiver_pincode || '',
+      receiverAddress: row.receiver_address || '',
+      weight: Number(row.weight || 0),
+      service: row.payment_mode || 'Prepaid',
+      amount: Number(row.customer_charge || 0),
+      courierCharge: Number(row.courier_charge || 0),
+      cod: Number(row.cod_amount || 0),
+      courierId: row.courier_id,
+      courier: courier?.name || 'Courier unavailable',
+      status: row.status || 'Booked',
+      created: row.created_at || row.booking_date,
+      eta: 'Estimate unavailable',
+      timeline: [['Shipment booked', 'Shipment record saved in TeraShip', row.created_at || nowISO()]]
+    };
+  }
+
+  async function loadData() {
+    if (!db || !authUser?.id || !profile?.organization_id) {
+      throw new Error('Supabase session or organization profile is missing. Please sign out and sign in again.');
+    }
+    const [customerResult, courierResult] = await Promise.all([
+      db.from('customers').select('*').order('created_at', { ascending: false }),
+      db.from('couriers').select('*').eq('active', true).order('name')
+    ]);
+    if (customerResult.error) throw customerResult.error;
+    if (courierResult.error) throw courierResult.error;
+
+    state.customers = (customerResult.data || []).map(normalizeCustomer);
+    state.couriers = courierResult.data || [];
+
+    const shipmentResult = await db.from('shipments').select('*').order('created_at', { ascending: false });
+    if (shipmentResult.error) throw shipmentResult.error;
+    state.shipments = (shipmentResult.data || []).map(normalizeShipment);
+    state.loading = false;
+  }
+
+  function heading(title, desc, actions = '') {
+    return `<div class="page-heading"><div><div class="eyebrow">TERASHIP WORKSPACE</div><h1>${title}</h1><p>${desc}</p></div><div class="heading-actions">${actions}</div></div>`;
+  }
+  function stat(label, value, note, icon) {
+    return `<article class="stat-card"><div class="stat-top"><span>${label}</span><span class="stat-icon">${icon}</span></div><div class="stat-value">${value}</div><div class="stat-note">${note}</div></article>`;
+  }
+
+  function shipmentRows(list) {
+    if (!list.length) return `<tr><td colspan="8"><div class="empty-state"><b>No shipments found</b>Book a shipment to see it here.</div></td></tr>`;
+    return list.map(s => `<tr>
+      <td><span class="mono">${escapeHtml(s.awb)}</span><br><small class="muted">${escapeHtml(String(s.id).slice(0, 8))}</small></td>
+      <td><b>${escapeHtml(s.customer)}</b><br><small class="muted">${escapeHtml(s.receiverCity)}</small></td>
+      <td>${escapeHtml(s.courier)}</td><td>${s.weight} kg</td>
+      <td>${s.service === 'COD' ? money(s.cod) : 'Prepaid'}</td>
+      <td>${badge(s.status)}</td><td>${date(s.created)}</td>
+      <td><button class="button small" data-action="track" data-awb="${escapeHtml(s.awb)}">View</button></td>
+    </tr>`).join('');
+  }
+
+  function recentTable(list = state.shipments.slice(0, 5)) {
+    return `<div class="panel table-panel"><div class="panel-head"><div><h2>Recent shipments</h2><p>Latest shipment records in your organization</p></div><button class="text-link" data-page="shipments">View all shipments →</button></div>
+    <div class="table-wrap"><table><thead><tr><th>AWB / Shipment</th><th>Customer / Destination</th><th>Courier</th><th>Weight</th><th>Payment</th><th>Status</th><th>Booked</th><th>Action</th></tr></thead><tbody>${shipmentRows(list)}</tbody></table></div></div>`;
+  }
+
+  function dashboard() {
+    const max = Math.max(1, ...[18, 24, 17, 29, 22, 32, 27]);
+    const bars = [18, 24, 17, 29, 22, 32, 27];
+    const chart = bars.map((n, i) => `<div class="bar-group"><div class="bar secondary" style="height:${n / max * 72}%"></div><div class="bar" style="height:${Math.max(8, (n + 7) / max * 100)}%"></div><span class="bar-label">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}</span></div>`).join('');
+    const courierRows = state.couriers.map(c => {
+      const info = rateGuide[c.name] || { code: c.name.slice(0, 2).toUpperCase(), color: '#edf1f8', eta: 'API not connected' };
+      const count = state.shipments.filter(s => s.courierId === c.id).length;
+      return `<div class="courier-row"><div class="courier-logo" style="background:${info.color}">${info.code}</div><div class="courier-info"><b>${escapeHtml(c.name)}</b><small>Illustrative service estimate only</small></div><div class="courier-count">${count}<small>shipments</small></div></div>`;
+    }).join('') || '<div class="empty-state">No active courier partners found.</div>';
+    return heading('Good day, Admin 👋', 'Here is your organization’s shipment activity.', `<button class="button" data-action="export">↓ Export data</button><button class="button primary" data-page="booking">＋ Book shipment</button>`)
+      + `<div class="grid stats-grid">${stat('Total shipments', state.shipments.length, 'Saved shipment records', '▤')}${stat('In transit', inTransit(), 'Includes out for delivery', '↗')}${stat('Delivered', delivered(), `${state.shipments.length ? Math.round(delivered() / state.shipments.length * 100) : 0}% of recorded shipments`, '✓')}${stat('Today’s bookings', todayCount(), 'Created today', '＋')}</div>
+      <div class="grid dashboard-grid"><section class="panel"><div class="panel-head"><div><h2>Shipment activity</h2><p>Illustrative chart — not historical database analytics</p></div><div class="chart-legend"><span>Bookings</span><span>Delivered</span></div></div><div class="bar-chart">${chart}</div></section>
+      <section class="panel"><div class="panel-head"><div><h2>Courier partners</h2><p>Shipment distribution by partner</p></div><button class="text-link" data-page="settings">Manage →</button></div><div class="courier-list">${courierRows}</div></section></div>${recentTable()}`;
+  }
+
+  function shipmentsPage() {
+    return heading('Shipments', 'Search, filter and manage shipment records.', `<button class="button" data-action="export">↓ Export CSV</button><button class="button primary" data-page="booking">＋ New shipment</button>`)
+      + `<div class="toolbar"><div class="searchbox"><span>⌕</span><input id="shipmentSearch" placeholder="Search AWB, customer or destination…"></div>
+      <select id="statusFilter"><option value="">All statuses</option>${['Booked', 'In Transit', 'Out for Delivery', 'Delivered', 'Exception', 'Cancelled'].map(s => `<option>${s}</option>`).join('')}</select>
+      <select id="courierFilter"><option value="">All couriers</option>${state.couriers.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('')}</select></div>
+      <div id="shipmentTable">${recentTable(state.shipments)}</div>`;
+  }
+
+  function customerOptions() {
+    return state.customers.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+  }
+
+  function bookingPage() {
+    const courierOptions = state.couriers.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+    return heading('Book a shipment', 'Save a shipment record to Supabase. This does not book a pickup with the courier.', `<button class="button" data-action="resetBooking">Reset form</button>`)
+      + `<form id="bookingForm"><div class="booking-layout"><div>
+      <section class="form-section"><h2>01 · Customer & shipment type</h2><div class="form-fields">
+      <div class="field"><label for="customerId">Customer account *</label><select id="customerId" required>${customerOptions()}</select></div>
+      <div class="field"><label for="serviceType">Payment type *</label><select id="serviceType"><option>Prepaid</option><option>COD</option></select></div>
+      <div class="field"><label for="weight">Actual weight (kg) *</label><input id="weight" type="number" min=".1" step=".1" value="1" required></div>
+      <div class="field"><label for="dimensions">Dimensions (cm)</label><input id="dimensions" placeholder="e.g. 20 × 15 × 10"></div>
+      <div class="field"><label for="declaredValue">Declared value (₹)</label><input id="declaredValue" type="number" min="0" value="1000"></div>
+      <div class="field" id="codField"><label for="codAmount">COD amount (₹)</label><input id="codAmount" type="number" min="0" value="0"></div>
+      </div></section>
+      <section class="form-section"><h2>02 · Sender details</h2><div class="form-fields">
+      <div class="field"><label for="senderName">Sender / business name *</label><input id="senderName" required placeholder="Business name"></div>
+      <div class="field"><label for="senderPhone">Sender mobile *</label><input id="senderPhone" required inputmode="numeric" placeholder="10-digit mobile"></div>
+      <div class="field"><label for="senderCity">Pickup city *</label><input id="senderCity" required placeholder="e.g. Ranchi"></div>
+      <div class="field"><label for="senderPin">Pickup PIN code</label><input id="senderPin" inputmode="numeric" maxlength="6" placeholder="834001"></div>
+      </div></section>
+      <section class="form-section"><h2>03 · Receiver details</h2><div class="form-fields">
+      <div class="field"><label for="receiverName">Receiver name *</label><input id="receiverName" required placeholder="Full name"></div>
+      <div class="field"><label for="receiverPhone">Receiver mobile *</label><input id="receiverPhone" required inputmode="numeric" placeholder="10-digit mobile"></div>
+      <div class="field"><label for="receiverCity">Destination city *</label><input id="receiverCity" required placeholder="e.g. Kolkata"></div>
+      <div class="field"><label for="receiverPin">Destination PIN code *</label><input id="receiverPin" required inputmode="numeric" maxlength="6" placeholder="700001"></div>
+      <div class="field full"><label for="receiverAddress">Full delivery address *</label><textarea id="receiverAddress" required placeholder="House / street / landmark / area"></textarea></div>
+      <div class="field full"><label for="notes">Shipment notes (optional)</label><input id="notes" placeholder="Fragile, handling notes, reference"></div>
+      </div></section>
+      <div class="callout warning">TeraShip saves the shipment record and generates a demo reference only. No courier pickup, valid AWB, shipping label, live tracking or COD transfer is created.</div>
+      </div><aside class="panel rate-panel"><div class="panel-head"><div><h2>04 · Courier selection</h2><p>Illustrative prices for presentation only</p></div></div>
+      <div id="rateOptions"></div><div class="field" style="margin:13px 0"><label for="customerCharge">Customer charge (₹)</label><input id="customerCharge" type="number" min="0" value="149"><small>Enter the amount you intend to charge.</small></div>
+      <div class="callout">Courier rates are estimates, not live quotes. Serviceability, volumetric weight, GST and surcharges are not checked.</div>
+      <button class="button primary wide" type="submit">Save shipment record</button></aside></div></form>`;
+  }
+
+  function ratesMarkup() {
+    if (!state.couriers.length) return '<div class="empty-state">No active courier partners. Add active couriers in Supabase first.</div>';
+    return state.couriers.map(c => {
+      const info = rateGuide[c.name] || { code: c.name.slice(0, 2).toUpperCase(), base: 70, eta: 'API not connected' };
+      const estimate = info.base * Math.max(1, Number($('#weight')?.value || 1));
+      const selected = state.selectedCourierId === c.id;
+      return `<label class="rate-option ${selected ? 'selected' : ''}"><input type="radio" name="courier" value="${escapeHtml(c.id)}" ${selected ? 'checked' : ''}>
+        <span class="courier-logo">${info.code}</span><span class="rate-copy"><b>${escapeHtml(c.name)}</b><small>Illustrative estimate · ${info.eta}</small></span><strong>${money(estimate)}</strong></label>`;
+    }).join('');
+  }
+
+  function renderRates() {
+    const target = $('#rateOptions');
+    if (target) target.innerHTML = ratesMarkup();
+  }
+
+  function customersPage() {
+    const rows = state.customers.map(c => `<tr><td><b>${escapeHtml(c.name)}</b><br><small class="muted">${escapeHtml(c.email)}</small></td>
+      <td>${escapeHtml(c.phone)}</td><td>${escapeHtml(c.city)}</td>
+      <td>${state.shipments.filter(s => s.customerId === c.id).length}</td>
+      <td><button class="button small" data-action="customerDetails" data-id="${escapeHtml(c.id)}">View</button>
+      <button class="button small" data-action="customerStatement" data-id="${escapeHtml(c.id)}">Statement</button></td></tr>`).join('');
+    return heading('Customers', 'Customer accounts stored in your Supabase database.', `<button class="button primary" data-action="addCustomer">＋ Add customer</button>`)
+      + `<div class="panel table-panel"><div class="panel-head"><div><h2>Customer directory</h2><p>${state.customers.length} customer accounts</p></div><button class="text-link" data-action="exportCustomers">Export CSV →</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Customer</th><th>Mobile</th><th>City</th><th>Shipments</th><th>Actions</th></tr></thead><tbody>${rows || '<tr><td colspan="5"><div class="empty-state">No customers yet. Add your first customer.</div></td></tr>'}</tbody></table></div></div>`;
+  }
+
+  function renderTracking(awb) {
+    const s = state.shipments.find(x => x.awb.toLowerCase() === String(awb || '').toLowerCase());
+    if (!s) return '<div class="empty-state"><b>No matching shipment</b>Check the reference and try again.</div>';
+    const steps = ['Booked', 'In Transit', 'Out for Delivery', 'Delivered'];
+    const current = Math.max(0, steps.indexOf(s.status));
+    const progress = steps.map((step, i) => `<div class="track-step ${i <= current ? 'done' : ''}"><span class="track-dot"></span><div><b>${step}</b><small>${i === 0 ? date(s.created) : i === current ? 'Current TeraShip demo status' : 'Awaiting update'}</small></div></div>`).join('');
+    return `<div class="panel tracking-card"><div class="tracking-top"><div><span class="eyebrow">SHIPMENT REFERENCE</span><h2 class="mono">${escapeHtml(s.awb)}</h2></div>${badge(s.status)}</div>
+      <div class="tracking-meta"><div><small>Receiver</small><b>${escapeHtml(s.receiver)}</b></div><div><small>Destination</small><b>${escapeHtml(s.receiverCity)} ${escapeHtml(s.receiverPin)}</b></div><div><small>Courier</small><b>${escapeHtml(s.courier)}</b></div><div><small>Weight</small><b>${s.weight} kg</b></div></div>
+      <div class="timeline">${progress}</div><div class="callout warning">This timeline shows status entered in TeraShip only. It is not live courier tracking.</div>
+      <button class="button" data-action="advance" data-awb="${escapeHtml(s.awb)}">Advance demo status</button>
+      <button class="button" data-action="label" data-awb="${escapeHtml(s.awb)}">Print demo label</button></div>`;
+  }
+
+  function trackingPage() {
+    return heading('Track shipment', 'Find a shipment by its TeraShip reference.', '')
+      + `<div class="panel track-search"><form id="trackingForm"><input id="trackingInput" placeholder="Enter AWB / TeraShip reference" value="${escapeHtml(state.trackingQuery)}" required><button class="button primary">Track</button></form></div>
+      <div id="trackingResult">${state.trackingQuery ? renderTracking(state.trackingQuery) : '<div class="empty-state">Enter a shipment reference above.</div>'}</div>`;
+  }
+
+  function billingPage() {
+    const cod = state.shipments.filter(s => s.service === 'COD');
+    const prepaid = state.shipments.filter(s => s.service !== 'COD');
+    const codValue = total(cod.map(s => s.cod));
+    return heading('Billing & COD', 'Shipment charges and COD records from saved shipments.', `<button class="button" data-action="exportCOD">Export COD CSV</button>`)
+      + `<div class="grid stats-grid">${stat('COD shipments', cod.length, 'Recorded COD shipments', '₹')}${stat('COD value', money(codValue), 'Not a courier remittance figure', '↔')}${stat('Prepaid shipments', prepaid.length, 'Recorded prepaid shipments', '✓')}${stat('Total customer charges', money(total(state.shipments.map(s => s.amount))), 'Customer charges entered', '₹')}</div>
+      <div class="panel table-panel"><div class="panel-head"><div><h2>COD register</h2><p>Reconciliation is not connected to courier accounts.</p></div></div><div class="table-wrap"><table><thead><tr><th>AWB</th><th>Customer</th><th>Courier</th><th>COD amount</th><th>Shipment status</th><th>Remittance</th></tr></thead><tbody>
+      ${cod.map(s => `<tr><td class="mono">${escapeHtml(s.awb)}</td><td>${escapeHtml(s.customer)}</td><td>${escapeHtml(s.courier)}</td><td>${money(s.cod)}</td><td>${badge(s.status)}</td><td>Not connected</td></tr>`).join('') || '<tr><td colspan="6">No COD shipments recorded.</td></tr>'}</tbody></table></div></div>`;
+  }
+
+  function reportsPage() {
+    return heading('Reports', 'Export the records currently available in Supabase.', '')
+      + `<div class="grid report-grid">
+      <article class="panel report-card"><h2>Shipment report</h2><p>All shipment references, destinations, charges and statuses.</p><button class="button primary" data-action="export">Download CSV</button></article>
+      <article class="panel report-card"><h2>Customer report</h2><p>Customer directory and shipment counts.</p><button class="button primary" data-action="exportCustomers">Download CSV</button></article>
+      <article class="panel report-card"><h2>Courier performance</h2><p>Counts based on TeraShip status entries, not carrier scans.</p><button class="button primary" data-action="exportCourier">Download CSV</button></article>
+      <article class="panel report-card"><h2>COD report</h2><p>COD amounts entered in shipment records; no remittance data.</p><button class="button primary" data-action="exportCOD">Download CSV</button></article></div>`;
+  }
+
+  function settingsPage() {
+    return heading('Settings & integrations', 'Organization and courier setup.', '')
+      + `<div class="grid settings-grid"><section class="panel"><h2>Organization</h2><div class="settings-line"><span>Business</span><b>SwiftRoute Logistics</b></div>
+      <div class="settings-line"><span>Organization ID</span><b class="mono">${escapeHtml(profile.organization_id)}</b></div>
+      <div class="settings-line"><span>Signed in as</span><b>${escapeHtml(authUser.email)}</b></div>
+      <div class="settings-line"><span>Database</span><b class="status-good">Supabase connected</b></div></section>
+      <section class="panel"><h2>Courier partners</h2><p class="muted">Active courier records from Supabase.</p>
+      ${state.couriers.map(c => `<div class="settings-line"><span>${escapeHtml(c.name)}</span><b>${c.active ? 'Active' : 'Inactive'}</b></div>`).join('') || 'No active couriers'}
+      <div class="callout warning">Courier API credentials and contracts are not configured. Rates, AWBs, labels, pickup booking and tracking are demo-only.</div></section>
+      <section class="panel"><h2>Security</h2><p>Use only the Supabase publishable/anon key in the public website. Keep service-role keys on a secure server, never in GitHub Pages.</p><p class="muted">Access is controlled by Supabase Auth and row-level security policies.</p></section></div>`;
+  }
+
+  function render() {
+    const content = $('#pageContent');
+    if (!content) return;
+    const pages = {
+      dashboard, shipments: shipmentsPage, booking: bookingPage,
+      tracking: trackingPage, customers: customersPage, billing: billingPage,
+      reports: reportsPage, settings: settingsPage
+    };
+    const title = pageTitles[state.page] || 'Dashboard';
+    $('#pageTitle') && ($('#pageTitle').textContent = title);
+    $$('.nav-link').forEach(link => link.classList.toggle('active', link.dataset.page === state.page));
+    content.innerHTML = (pages[state.page] || dashboard)();
+    if (state.page === 'booking') {
+      renderRates();
+      const form = $('#bookingForm');
+      form?.addEventListener('change', e => {
+        if (e.target.name === 'courier') {
+          state.selectedCourierId = e.target.value;
+          renderRates();
+        }
+      });
+      $('#weight')?.addEventListener('input', renderRates);
+      form?.addEventListener('submit', submitBooking);
+    }
+    if (state.page === 'shipments') {
+      const apply = () => {
+        const q = ($('#shipmentSearch')?.value || '').toLowerCase();
+        const status = $('#statusFilter')?.value || '';
+        const courier = $('#courierFilter')?.value || '';
+        const filtered = state.shipments.filter(s =>
+          (!q || [s.awb, s.customer, s.receiverCity].some(v => String(v).toLowerCase().includes(q))) &&
+          (!status || s.status === status) && (!courier || s.courierId === courier));
+        $('#shipmentTable').innerHTML = recentTable(filtered);
+      };
+      $('#shipmentSearch')?.addEventListener('input', apply);
+      $('#statusFilter')?.addEventListener('change', apply);
+      $('#courierFilter')?.addEventListener('change', apply);
+    }
+    if (state.page === 'tracking') {
+      $('#trackingForm')?.addEventListener('submit', e => {
+        e.preventDefault();
+        state.trackingQuery = $('#trackingInput').value.trim();
+        $('#trackingResult').innerHTML = renderTracking(state.trackingQuery);
+      });
+    }
+  }
+
+  async function submitBooking(e) {
+    e.preventDefault();
+    const val = id => $('#' + id)?.value.trim() || '';
+    const customerId = val('customerId');
+    const courierId = state.selectedCourierId || $('input[name="courier"]:checked')?.value || '';
+    const weight = Number(val('weight'));
+    const service = val('serviceType');
+    const codAmount = service === 'COD' ? Number(val('codAmount')) : 0;
+    if (!customerId) return toast('Add a customer account before booking.');
+    if (!courierId) return toast('Please select a courier partner.');
+    if (!(weight > 0)) return toast('Enter a valid shipment weight.');
+    const courier = state.couriers.find(c => c.id === courierId);
+    const info = rateGuide[courier?.name] || { base: 70 };
+    const estimated = Math.round(info.base * Math.max(1, weight));
+    const customerCharge = Number(val('customerCharge') || estimated);
+    const awb = `TS${Date.now().toString().slice(-10)}`;
+    const payload = {
+      organization_id: profile.organization_id,
+      customer_id: customerId,
+      courier_id: courierId,
+      awb_number: awb,
+      booking_date: new Date().toISOString().slice(0, 10),
+      sender_name: val('senderName'),
+      sender_phone: val('senderPhone'),
+      sender_address: val('senderCity'),
+      sender_pincode: val('senderPin'),
+      receiver_name: val('receiverName'),
+      receiver_phone: val('receiverPhone'),
+      receiver_address: val('receiverAddress'),
+      receiver_city: val('receiverCity'),
+      receiver_state: '',
+      receiver_pincode: val('receiverPin'),
+      weight,
+      payment_mode: service,
+      cod_amount: codAmount,
+      courier_charge: estimated,
+      customer_charge: customerCharge,
+      status: 'Booked',
+      notes: val('notes') || null,
+      created_by: authUser.id
+    };
+    const button = $('#bookingForm button[type="submit"]');
+    if (button) { button.disabled = true; button.textContent = 'Saving shipment…'; }
+    try {
+      const { error } = await db.from('shipments').insert(payload);
+      if (error) throw error;
+      await loadData();
+      state.page = 'shipments';
+      render();
+      toast(`Shipment record saved. Demo reference: ${awb}`);
+    } catch (error) {
+      showError('Could not save shipment', error);
+      if (button) { button.disabled = false; button.textContent = 'Save shipment record'; }
+    }
+  }
+
+  function openModal() {
+    $('#modalBackdrop')?.classList.add('open');
+  }
+  function closeModal() {
+    $('#modalBackdrop')?.classList.remove('open');
+  }
+
+  function labelHtml(s) {
+    return `<div class="shipping-label"><div class="label-head"><b>TERASHIP</b><span>DEMO LABEL · NOT VALID FOR SHIPPING</span></div>
+      <div class="label-section"><b>SHIP TO</b><h2>${escapeHtml(s.receiver)}</h2><p>${escapeHtml(s.receiverAddress)}<br>${escapeHtml(s.receiverCity)} ${escapeHtml(s.receiverPin)}</p><strong>${escapeHtml(s.receiverPhone)}</strong></div>
+      <div class="label-grid"><div><b>SHIPMENT REF</b><span>${escapeHtml(s.awb)}</span></div><div><b>COURIER</b><span>${escapeHtml(s.courier)}</span></div><div><b>WEIGHT</b><span>${s.weight} kg</span></div><div><b>PAYMENT</b><span>${escapeHtml(s.service)}</span></div></div>
+      <div class="barcode"></div><div class="label-foot"><span>FROM: ${escapeHtml(s.sender)}</span><span>${date(s.created)}</span></div></div>`;
+  }
+  function showLabel(s) {
+    const w = window.open('', '_blank', 'width=600,height=700');
+    if (!w) return toast('Please allow pop-ups to print the demo label.');
+    w.document.write(`<!doctype html><html><head><title>TeraShip demo label</title><style>
+        *{box-sizing:border-box}body{font:14px Arial,sans-serif;padding:20px;color:#111}.shipping-label{border:2px solid #111;padding:18px;max-width:520px;margin:auto}
+        .label-head{display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:12px}.label-head b{font-size:25px}.label-head span{font-size:10px;font-weight:bold}
+        .label-section{padding:18px 0;border-bottom:1px solid #777}.label-section h2{font-size:23px;margin:8px 0}.label-section p{line-height:1.5}
+        .label-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:15px 0}
+        .label-grid b{display:block;font-size:11px}.label-grid span{font-size:12px}.barcode{height:48px;background:repeating-linear-gradient(90deg,#111 0,#111 2px,white 2px,white 4px,#111 4px,#111 5px,white 5px,white 8px);margin:15px 0}
+        .label-foot{display:flex;justify-content:space-between;font-size:10px}@page{size:A6;margin:8mm}</style></head><body>${labelHtml(s)}<script>window.onload=()=>window.print()<\/script></body></html>`);
+    w.document.close();
+  }
+
+  function download(name, rows) {
+    const csv = rows.map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+    toast('CSV export prepared.');
+  }
+
+  function exportShipments(list = state.shipments) {
+    download('teraship-shipments.csv', [['AWB', 'Shipment ID', 'Customer', 'Courier', 'Sender city', 'Receiver', 'Destination city', 'PIN', 'Weight kg', 'Payment type', 'Charge INR', 'COD INR', 'Status', 'Booked at'],
+      ...list.map(s => [s.awb, s.id, s.customer, s.courier, s.senderCity, s.receiver, s.receiverCity, s.receiverPin, s.weight, s.service, s.amount, s.cod, s.status, s.created])]);
+  }
+  function exportCOD() {
+    download('teraship-cod.csv', [['AWB', 'Customer', 'Courier', 'COD INR', 'Status', 'Reconciliation'],
+      ...state.shipments.filter(s => s.service === 'COD').map(s => [s.awb, s.customer, s.courier, s.cod, s.status, 'Not reconciled'])]);
+  }
+  function exportCustomers() {
+    download('teraship-customers.csv', [['Customer ID', 'Name', 'Phone', 'Email', 'City', 'Shipments'],
+      ...state.customers.map(c => [c.id, c.name, c.phone, c.email, c.city, state.shipments.filter(s => s.customerId === c.id).length])]);
+  }
+  function exportCourier() {
+    download('teraship-courier-performance.csv', [['Courier', 'Shipments', 'Booked', 'In Transit', 'Out for Delivery', 'Delivered'],
+      ...state.couriers.map(c => [c.name, state.shipments.filter(s => s.courierId === c.id).length,
+        ...['Booked', 'In Transit', 'Out for Delivery', 'Delivered'].map(st => state.shipments.filter(s => s.courierId === c.id && s.status === st).length)])]);
+  }
+
+  function addCustomer() {
+    $('#modalTitle').textContent = 'Add customer account';
+    $('#modalBody').innerHTML = `<form id="customerForm"><div class="form-fields">
+      <div class="field"><label>Business / customer name *</label><input id="newName" required></div>
+      <div class="field"><label>Mobile number *</label><input id="newPhone" required inputmode="tel"></div>
+      <div class="field"><label>Email</label><input id="newEmail" type="email"></div>
+      <div class="field"><label>City *</label><input id="newCity" required></div>
+      <div class="field full"><label>Address</label><input id="newAddress"></div>
+      <div class="field"><label>State</label><input id="newState"></div>
+      <div class="field"><label>PIN code</label><input id="newPincode" inputmode="numeric" maxlength="6"></div>
+      </div><div style="margin-top:18px;display:flex;gap:8px"><button class="button primary">Save customer</button><button class="button" type="button" id="cancelCustomer">Cancel</button></div></form>`;
+    openModal();
+    $('#cancelCustomer').onclick = closeModal;
+    $('#customerForm').onsubmit = async e => {
+      e.preventDefault();
+      const value = id => $('#' + id).value.trim();
+      const payload = {
+        organization_id: profile.organization_id,
+        name: value('newName'),
+        phone: value('newPhone'),
+        email: value('newEmail') || null,
+        city: value('newCity'),
+        address: value('newAddress') || null,
+        state: value('newState') || null,
+        pincode: value('newPincode') || null
+      };
+      const submit = $('#customerForm').querySelector('[type="submit"]');
+      submit.disabled = true; submit.textContent = 'Saving…';
+      try {
+        const { error } = await db.from('customers').insert(payload);
+        if (error) throw error;
+        await loadData();
+        closeModal(); render();
+        toast('Customer saved to Supabase.');
+      } catch (error) {
+        showError('Could not save customer', error);
+        submit.disabled = false; submit.textContent = 'Save customer';
+      }
+    };
+  }
+
+  function customerDetails(id) {
+    const c = state.customers.find(x => x.id === id);
+    if (!c) return;
+    const shipments = state.shipments.filter(s => s.customerId === id);
+    $('#modalTitle').textContent = c.name;
+    $('#modalBody').innerHTML = `<div class="grid billing-grid"><div class="billing-stat"><span>Shipments</span><b>${shipments.length}</b></div><div class="billing-stat"><span>Account balance</span><b>Not configured</b></div><div class="billing-stat"><span>Delivered</span><b>${shipments.filter(s => s.status === 'Delivered').length}</b></div></div>
+      <p><b>Phone:</b> ${escapeHtml(c.phone)}<br><b>Email:</b> ${escapeHtml(c.email)}<br><b>City:</b> ${escapeHtml(c.city)}<br><b>Address:</b> ${escapeHtml(c.address)}</p>
+      <h3 style="font-size:13px">Recent shipments</h3><div class="table-wrap"><table><thead><tr><th>AWB</th><th>Courier</th><th>Status</th></tr></thead><tbody>
+      ${shipments.map(s => `<tr><td class="mono">${escapeHtml(s.awb)}</td><td>${escapeHtml(s.courier)}</td><td>${badge(s.status)}</td></tr>`).join('') || '<tr><td colspan="3">No shipments yet</td></tr>'}</tbody></table></div>`;
+    openModal();
+  }
+
+  function customerStatement(id) {
+    const c = state.customers.find(x => x.id === id);
+    if (!c) return;
+    const shipments = state.shipments.filter(s => s.customerId === id);
+    download(`customer-${String(c.id).slice(0, 8)}-statement.csv`, [['AWB', 'Date', 'Courier', 'Destination', 'Charge INR', 'COD INR', 'Status'],
+      ...shipments.map(s => [s.awb, s.created, s.courier, s.receiverCity, s.amount, s.cod, s.status])]);
+  }
+
+  async function advanceStatus(awb) {
+    const s = state.shipments.find(x => x.awb === awb);
+    if (!s) return;
+    const sequence = ['Booked', 'In Transit', 'Out for Delivery', 'Delivered'];
+    const index = sequence.indexOf(s.status);
+    const next = sequence[Math.min(Math.max(index, 0) + 1, sequence.length - 1)];
+    if (next === s.status) { toast('Shipment is already marked delivered.'); return; }
+    try {
+      const { error } = await db.from('shipments').update({ status: next }).eq('id', s.id);
+      if (error) throw error;
+      await loadData();
+      if (state.page === 'tracking') $('#trackingResult').innerHTML = renderTracking(awb);
+      else render();
+      toast('TeraShip status updated to ' + next + '. This is not a courier tracking update.');
+    } catch (error) { showError('Could not update shipment status', error); }
+  }
+
+  document.addEventListener('click', async e => {
+    const page = e.target.closest('[data-page]');
+    if (page) { state.page = page.dataset.page; render(); return; }
+    const action = e.target.closest('[data-action]');
+    if (!action) return;
+    const a = action.dataset.action;
+    if (a === 'export') exportShipments();
+    if (a === 'exportCOD') exportCOD();
+    if (a === 'exportCustomers') exportCustomers();
+    if (a === 'exportCourier') exportCourier();
+    if (a === 'track') { state.trackingQuery = action.dataset.awb; state.page = 'tracking'; render(); return; }
+    if (a === 'label') {
+      const shipment = state.shipments.find(x => x.awb === action.dataset.awb);
+      if (shipment) showLabel(shipment);
+    }
+    if (a === 'advance') await advanceStatus(action.dataset.awb);
+    if (a === 'addCustomer') addCustomer();
+    if (a === 'customerDetails') customerDetails(action.dataset.id);
+    if (a === 'customerStatement') customerStatement(action.dataset.id);
+    if (a === 'resetBooking') { state.selectedRate = null; state.selectedCourierId = ''; render(); }
   });
-  $('#modalClose').addEventListener('click',closeModal);$('#modalBackdrop').addEventListener('click',e=>{if(e.target.id==='modalBackdrop')closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
-  $('#mobileMenu').addEventListener('click',()=>$('#sidebar').classList.toggle('open'));
-  $('#dismissBanner').addEventListener('click',()=>$('.demo-banner').classList.add('hidden'));
-  $('#helpBtn').addEventListener('click',()=>{ $('#modalTitle').textContent='About this demo';$('#modalBody').innerHTML=`<p><b>TeraShip by TeraSyncTech</b> is a front-end demonstration of a multi-courier aggregator portal.</p><ul><li>All courier rates are illustrative.</li><li>AWBs and shipping labels are demo-only.</li><li>Tracking events are simulated.</li><li>Data is stored in this browser using localStorage.</li><li>Clearing browser storage removes local changes.</li><li>Live use requires a secure backend and authorized courier APIs.</li></ul><div class="callout warning">Do not use this demo to ship real parcels, collect real payments or store sensitive customer data.</div>`;openModal()});
-  $('#profileMenu').addEventListener('click',()=>toast('Demo administrator profile'));
-  $('#year').textContent=new Date().getFullYear();
-  render();
+
+  $('#modalClose')?.addEventListener('click', closeModal);
+  $('#modalBackdrop')?.addEventListener('click', e => { if (e.target.id === 'modalBackdrop') closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  $('#mobileMenu')?.addEventListener('click', () => $('#sidebar')?.classList.toggle('open'));
+  $('#dismissBanner')?.addEventListener('click', () => $('.demo-banner')?.classList.add('hidden'));
+  $('#helpBtn')?.addEventListener('click', () => {
+    $('#modalTitle').textContent = 'About TeraShip';
+    $('#modalBody').innerHTML = `<p><b>TeraShip by TeraSyncTech</b> stores customer and shipment records in your Supabase organization.</p>
+      <ul><li>Customer and shipment records are database-backed.</li><li>Courier prices are illustrative.</li><li>AWB references and labels are demo-only.</li><li>Tracking is not connected to courier networks.</li><li>Live courier booking requires authorized carrier APIs and backend integration.</li></ul>
+      <div class="callout warning">Do not use the demo label as a real shipping label. Do not store payment-card data or publish secret keys.</div>`;
+    openModal();
+  });
+  $('#profileMenu')?.addEventListener('click', () => toast(authUser?.email || 'Signed-in administrator'));
+  if ($('#year')) $('#year').textContent = new Date().getFullYear();
+
+  async function start() {
+    const content = $('#pageContent');
+    if (content) content.innerHTML = '<div class="empty-state"><b>Connecting to TeraShip database…</b>Please wait.</div>';
+    try {
+      await loadData();
+      render();
+    } catch (error) {
+      console.error('TeraShip startup error:', error);
+      if (content) content.innerHTML = `<div class="empty-state"><b>Could not load TeraShip data</b>${escapeHtml(error?.message || 'Check the Supabase connection and table permissions.')}</div>`;
+      toast('Database connection failed. Check the browser console or Supabase policies.');
+    }
+  }
+
+  start();
+})();
+      <button class="button primary" style="width:100%;margin-top:14px" type="submit">Save shipment record →</button></aside></div></form>`;
+  }
+
+  function trackingPage() {
+    return heading('Track a shipment', 'Find a shipment saved in your TeraShip database.')
+      + `<div class="panel"><div class="panel-head"><div><h2>Shipment lookup</h2><p>Enter the TeraShip reference / demo AWB.</p></div></div>
+      <form id="trackingForm" class="tracking-search"><input id="trackingInput" value="${escapeHtml(state.trackingQuery)}" placeholder="Enter AWB / tracking number" required><button class="button primary">Find shipment</button></form>
+      <div id="trackingResult" class="tracking-result">${state.trackingQuery ? renderTracking(state.trackingQuery) : '<div class="empty-state"><b>Enter an AWB to begin</b>Only shipment records saved in this organization can be found.</div>'}</div></div>`;
+  }
+
+  function renderTracking(query) {
+    const s = state.shipments.find(x => (x.awb || '').toLowerCase() === query.toLowerCase() || String(x.id).toLowerCase() === query.toLowerCase());
+    if (!s) return '<div class="empty-state"><b>No matching shipment</b>Check the reference and try again.</div>';
+    const timeline = s.timeline || [];
+    return `<div class="tracking-summary"><div><div class="eyebrow">${escapeHtml(s.courier)} · TERASHIP RECORD</div><h2>${escapeHtml(s.awb)}</h2><p class="muted" style="margin:0;font-size:11px">${escapeHtml(s.senderCity)} → ${escapeHtml(s.receiverCity)} · ${s.weight} kg</p></div><div>${badge(s.status)}</div></div>
+      <div class="timeline">${timeline.map((t, i) => `<div class="timeline-item ${i === timeline.length - 1 ? '' : 'future'}"><span class="timeline-dot"></span><div><b>${escapeHtml(t[0])}</b><small>${escapeHtml(t[1])}</small><small>${new Date(t[2]).toLocaleString('en-IN')}</small></div></div>`).join('')}</div>
+      <div class="callout warning">This is the status recorded in TeraShip. It is not live tracking data from ${escapeHtml(s.courier)}.</div>
+      <div style="margin-top:15px;display:flex;gap:8px;flex-wrap:wrap"><button class="button" data-action="label" data-awb="${escapeHtml(s.awb)}">Print sample label</button></div>`;
+  }
+
+  function customersPage() {
+    const cards = state.customers.map(c => {
+      const count = state.shipments.filter(s => s.customerId === c.id).length;
+      return `<article class="customer-card"><div class="customer-card-top"><div class="customer-avatar">${escapeHtml(c.name.split(' ').slice(0, 2).map(x => x[0]).join(''))}</div><div><h3>${escapeHtml(c.name)}</h3><small>${escapeHtml(String(c.id).slice(0, 8))} · ${escapeHtml(c.city)}</small></div></div>
+      <div style="font-size:11px;color:#58657d;line-height:1.9">${escapeHtml(c.phone)}<br>${escapeHtml(c.email)}<br>${escapeHtml(c.address)}</div>
+      <div class="customer-metrics"><div><b>${count}</b><span>Shipments</span></div><div><b>${money(0)}</b><span>Account balance*</span></div></div>
+      <div style="display:flex;gap:8px;margin-top:13px"><button class="button small" data-action="customerDetails" data-id="${escapeHtml(c.id)}">View account</button><button class="button small" data-action="customerStatement" data-id="${escapeHtml(c.id)}">Statement CSV</button></div></article>`;
+    }).join('');
+    return heading('Customer accounts', 'Manage customer records saved in Supabase.', `<button class="button primary" data-action="addCustomer">＋ Add customer</button>`)
+      + `<div class="grid customer-grid">${cards || '<div class="empty-state"><b>No customer accounts yet</b>Use Add customer to create your first account.</div>'}</div>
+      <div class="callout">* Account balances and formal customer ledgers are not configured in the current database schema.</div>`;
+  }
+
+  function billingPage() {
+    const cod = total(state.shipments.filter(s => s.service === 'COD').map(s => s.cod));
+    const deliveredCOD = total(state.shipments.filter(s => s.service === 'COD' && s.status === 'Delivered').map(s => s.cod));
+    return heading('Billing & COD', 'View COD amounts recorded against shipment records.')
+      + `<div class="grid billing-grid"><div class="billing-stat"><span>Total COD value</span><b>${money(cod)}</b><small>COD amounts entered in TeraShip</small></div><div class="billing-stat"><span>Delivered COD status</span><b>${money(deliveredCOD)}</b><small>Marked delivered in TeraShip, not courier-confirmed</small></div><div class="billing-stat"><span>Invoices</span><b>Not configured</b><small>Invoice table integration pending</small></div></div>
+      <div class="panel table-panel"><div class="panel-head"><div><h2>COD register</h2><p>Reconciliation is not connected to courier collections.</p></div></div>
+      <div class="table-wrap"><table><thead><tr><th>AWB</th><th>Customer</th><th>Courier</th><th>COD amount</th><th>Shipment status</th><th>Collection</th></tr></thead><tbody>
+      ${state.shipments.filter(s => s.service === 'COD').map(s => `<tr><td class="mono">${escapeHtml(s.awb)}</td><td>${escapeHtml(s.customer)}</td><td>${escapeHtml(s.courier)}</td><td>${money(s.cod)}</td><td>${badge(s.status)}</td><td><span class="badge pending">Not reconciled</span></td></tr>`).join('') || '<tr><td colspan="6">No COD shipments yet.</td></tr>'}
+      </tbody></table></div></div>`;
+  }
+
+  function reportsPage() {
+    return heading('Reports & exports', 'Export current customer and shipment records from Supabase.')
+      + `<div class="grid report-grid"><article class="report-card"><div class="stat-icon">▤</div><h3>Shipment register</h3><p>AWBs, customers, couriers, destinations, charges and statuses.</p><button class="button" data-action="export">Download CSV →</button></article>
+      <article class="report-card"><div class="stat-icon">₹</div><h3>COD report</h3><p>COD amounts and current TeraShip shipment statuses.</p><button class="button" data-action="exportCOD">Download CSV →</button></article>
+      <article class="report-card"><div class="stat-icon">♙</div><h3>Customer directory</h3><p>Customer accounts and shipment counts.</p><button class="button" data-action="exportCustomers">Download CSV →</button></article>
+      <article class="report-card"><div class="stat-icon">▥</div><h3>Courier performance</h3><p>Shipment counts by courier partner and recorded status.</p><button class="button" data-action="exportCourier">Download CSV →</button></article></div>
+      <div class="callout warning">Exports contain records currently stored in your Supabase organization. They are not courier reconciliation or GST reports.</div>`;
+  }
+
+  function settingsPage() {
+    const courierCards = state.couriers.map(c => {
+      const info = rateGuide[c.name] || { code: c.name.slice(0, 2).toUpperCase(), color: '#edf1f8' };
+      return `<div class="integration-card"><div class="courier-logo" style="background:${info.color}">${info.code}</div><div><b>${escapeHtml(c.name)}</b><small>API credentials not configured</small></div><div class="integration-status"><span class="badge pending">Not connected</span></div></div>`;
+    }).join('');
+    return heading('Settings & integrations', 'Review active courier partners and portal presentation settings.')
+      + `<div class="grid settings-grid"><section class="panel"><div class="panel-head"><div><h2>Courier partners</h2><p>Partners loaded from your Supabase database</p></div></div><div class="courier-list">${courierCards || '<div class="empty-state">No active courier partners found.</div>'}</div></section>
+      <section class="panel"><div class="panel-head"><div><h2>Portal branding</h2><p>Customize the presentation in this browser</p></div></div>
+      <form id="brandingForm"><div class="field" style="margin-bottom:13px"><label for="brandName">Portal name</label><input id="brandName" value="TeraShip"></div>
+      <div class="field" style="margin-bottom:13px"><label for="brandCompany">Company line</label><input id="brandCompany" value="by TeraSyncTech"></div>
+      <div class="field" style="margin-bottom:15px"><label for="brandAccent">Accent color</label><select id="brandAccent"><option value="#3867e8">Blue (default)</option><option value="#16806a">Emerald</option><option value="#6f42c1">Violet</option><option value="#d06a25">Orange</option></select></div>
+      <button class="button primary">Apply branding</button></form><hr style="border:0;border-top:1px solid var(--line);margin:22px 0">
+      <h2 style="font-size:13px">Production checklist</h2><ul style="padding-left:18px;color:#65728a;font-size:11px;line-height:2"><li>Courier API contracts and credentials</li><li>Live rates and serviceability checks</li><li>Valid courier labels and pickup booking</li><li>Webhook-based tracking updates</li><li>Invoice, payment and COD reconciliation</li><li>Audit logs, backups and privacy controls</li></ul></section></div>
+      <div class="callout warning" style="margin-top:16px">Never publish service-role keys, courier API secrets or unnecessary customer personal data in this public GitHub repository.</div>`;
+  }
+
+  function render() {
+    const content = $('#pageContent');
+    if (!content) return;
+    const pages = { dashboard, shipments: shipmentsPage, booking: bookingPage, tracking: trackingPage, customers: customersPage, billing: billingPage, reports: reportsPage, settings: settingsPage };
+    content.innerHTML = (pages[state.page] || dashboard)();
+    if ($('#pageCrumb')) $('#pageCrumb').textContent = pageTitles[state.page] || 'Dashboard';
+    $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === state.page));
+    $('#sidebar')?.classList.remove('open');
+    if (state.page === 'booking') { populateCustomer(); renderRates(); bindBooking(); }
+    if (state.page === 'shipments') bindShipmentFilters();
+    if (state.page === 'tracking') bindTracking();
+    if (state.page === 'settings') bindBranding();
+  }
+
+  function populateCustomer() {
+    const c = state.customers[0];
+    if (!c) return;
+    $('#senderName').value = c.name;
+    $('#senderPhone').value = c.phone || '';
+    $('#senderCity').value = c.city || '';
+    if ($('#customerCharge')) $('#customerCharge').value = 149;
+  }
+
+  function calculateRate(c) {
+    const guide = rateGuide[c.name] || { base: 65 };
+    const weight = Math.max(.1, Number($('#weight')?.value || 1));
+    return Math.round(guide.base + Math.max(0, Math.ceil(weight) - 1) * 24 + (c.name === 'Blue Dart' ? 25 : 0));
+  }
+
+  function renderRates() {
+    const box = $('#rateOptions');
+    if (!box) return;
+    const rates = state.couriers.map(c => ({ ...c, rate: calculateRate(c), guide: rateGuide[c.name] || { eta: 'Estimate only' } }))
+      .sort((a, b) => a.rate - b.rate);
+    if (!rates.length) {
+      box.innerHTML = '<div class="empty-state">No active courier partners are available. Add active couriers in Supabase first.</div>';
+      return;
+    }
+    if (!state.selectedCourierId || !rates.some(r => r.id === state.selectedCourierId)) state.selectedCourierId = rates[0].id;
+    box.innerHTML = rates.map(c => `<div class="rate-card ${state.selectedCourierId === c.id ? 'selected' : ''}" data-rate="${escapeHtml(c.id)}">
+      <div><b><span class="radio-dot"></span>${escapeHtml(c.name)}</b><small>Est. ${c.guide.eta} · illustrative rate</small></div>
+      <div class="rate-price">${money(c.rate)}<small>estimate</small></div></div>`).join('');
+    const chosen = rates.find(c => c.id === state.selectedCourierId);
+    if ($('#customerCharge') && !$('#customerCharge').dataset.edited) $('#customerCharge').value = Math.round(chosen.rate * 1.35);
+  }
+  function bindBooking() {
+    const form = $('#bookingForm');
+    if (!form) return;
+    $('#weight')?.addEventListener('input', () => { state.selectedRate = null; renderRates(); });
+    $('#serviceType')?.addEventListener('change', () => {
+      $('#codField').style.opacity = $('#serviceType').value === 'COD' ? '1' : '.5';
+      if ($('#serviceType').value !== 'COD') $('#codAmount').value = 0;
+    });
+    $('#customerCharge')?.addEventListener('input', e => { e.target.dataset.edited = '1'; });
+    $('#rateOptions')?.addEventListener('click', e => {
+      const card = e.target.closest('[data-rate]');
+      if (!card) return;
+      state.selectedCourierId = card.dataset.rate;
+      state.selectedRate = card.dataset.rate;
+      renderRates();
+    });
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const v = id => ($('#' + id)?.value || '').trim();
+      const customer = state.customers.find(c => c.id === v('customerId'));
+      const courier = state.couriers.find(c => c.id === state.selectedCourierId);
+      if (!customer) { toast('Please add a customer account first.'); return; }
+      if (!courier) { toast('Please select an active courier.'); return; }
+      const service = v('serviceType');
+      const weight = Number(v('weight'));
+      const customerCharge = Number(v('customerCharge'));
+      const codAmount = service === 'COD' ? Number(v('codAmount')) : 0;
+      if (!(weight > 0) || customerCharge < 0 || codAmount < 0) { toast('Please check weight and charge values.'); return; }
+      const guide = rateGuide[courier.name] || { base: 65 };
+      const estimatedCourierCharge = calculateRate({ name: courier.name });
+      const awb = 'TSDEMO' + Date.now().toString().slice(-9);
+      const payload = {
+        organization_id: profile.organization_id,
+        customer_id: customer.id,
+        courier_id: courier.id,
+        awb_number: awb,
+        booking_date: new Date().toISOString().slice(0, 10),
+        sender_name: v('senderName'),
+        sender_phone: v('senderPhone'),
+        sender_address: v('senderCity'),
+        sender_pincode: v('senderPin') || null,
+        receiver_name: v('receiverName'),
+        receiver_phone: v('receiverPhone'),
+        receiver_address: v('receiverAddress'),
+        receiver_city: v('receiverCity'),
+        receiver_state: null,
+        receiver_pincode: v('receiverPin'),
+        weight,
+        payment_mode: service,
+        cod_amount: codAmount,
+        courier_charge: estimatedCourierCharge,
+        customer_charge: customerCharge,
+        status: 'Booked',
+        notes: v('notes') || null,
+        created_by: authUser.id
+      };
+      const submit = form.querySelector('[type="submit"]');
+      if (submit) { submit.disabled = true; submit.textContent = 'Saving shipment…'; }
+      try {
+        const { data, error } = await db.from('shipments').insert(payload).select('*').single();
+        if (error) throw error;
+        await loadData();
+        const saved = state.shipments.find(s => s.id === data.id);
+        if (saved) showLabel(saved);
+        toast('Shipment record saved: ' + awb);
+        state.page = 'shipments';
+        render();
+      } catch (error) {
+        showError('Could not save shipment', error);
+        if (submit) { submit.disabled = false; submit.textContent = 'Save shipment record →'; }
+      }
+    });
+  }
+
+  function bindShipmentFilters() {
+    const update = () => {
+      const q = ($('#shipmentSearch')?.value || '').toLowerCase();
+      const status = $('#statusFilter')?.value || '';
+      const courierId = $('#courierFilter')?.value || '';
+      const list = state.shipments.filter(s =>
+        (`${s.awb} ${s.id} ${s.customer} ${s.receiverCity}`).toLowerCase().includes(q) &&
+        (!status || s.status === status) && (!courierId || s.courierId === courierId));
+      $('#shipmentTable').innerHTML = recentTable(list);
+    };
+    ['shipmentSearch', 'statusFilter', 'courierFilter'].forEach(id => $('#' + id)?.addEventListener('input', update));
+  }
+
+  function bindTracking() {
+    $('#trackingForm')?.addEventListener('submit', e => {
+      e.preventDefault();
+      state.trackingQuery = $('#trackingInput').value.trim();
+      $('#trackingResult').innerHTML = renderTracking(state.trackingQuery);
+    });
+  }
+
+  function bindBranding() {
+    $('#brandingForm')?.addEventListener('submit', e => {
+      e.preventDefault();
+      const name = $('#brandName').value.trim() || 'TeraShip';
+      const company = $('#brandCompany').value.trim() || 'by TeraSyncTech';
+      if ($('.brand strong')) $('.brand strong').textContent = name;
+      if ($('.brand small')) $('.brand small').textContent = company;
+      document.documentElement.style.setProperty('--blue', $('#brandAccent').value);
+      document.documentElement.style.setProperty('--blue2', hexToRgba($('#brandAccent').value, .11));
+      toast('Branding updated in this browser.');
+    });
+  }
+
+  function hexToRgba(hex, alpha) {
+    const h = hex.replace('#', '');
+    return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${alpha})`;
+  }
+
+  function openModal() { $('#modalBackdrop')?.classList.remove('hidden'); }
+  function closeModal() { $('#modalBackdrop')?.classList.add('hidden'); }
+
+  function labelHtml(s) {
+    return `<div class="label-sheet"><div class="label-brand"><div><b>TeraShip</b><div style="font-size:9px">by TeraSyncTech · DEMO</div></div><div style="text-align:right"><b>${escapeHtml(s.courier)}</b><div style="font-size:9px">SAMPLE LABEL ONLY</div></div></div>
+      <div style="font-size:9px;color:#555">DEMO REFERENCE</div><div class="label-awb">${escapeHtml(s.awb)}</div>
+      <div class="label-grid"><div><b>SHIP FROM</b><span>${escapeHtml(s.sender)}<br>${escapeHtml(s.senderCity)} ${escapeHtml(s.senderPin || '')}</span></div>
+      <div><b>SHIP TO</b><span>${escapeHtml(s.receiver)}<br>${escapeHtml(s.receiverAddress || s.receiverCity)}<br>${escapeHtml(s.receiverCity)} ${escapeHtml(s.receiverPin || '')}<br>${escapeHtml(s.receiverPhone)}</span></div></div>
+      <hr style="border:0;border-top:1px solid #ddd"><div style="display:flex;justify-content:space-between;font-size:11px"><span>Weight: ${s.weight} kg</span><span>Payment: ${escapeHtml(s.service)}</span><span>COD: ${money(s.cod)}</span></div>
+      <div class="barcode"></div><div class="label-foot"><span>Generated ${date(s.created)}</span><span>NOT VALID FOR SHIPPING</span></div></div>`;
+  }
+
+  function showLabel(s) {
+    $('#modalTitle').textContent = 'Sample shipping label';
+    $('#modalBody').innerHTML = `<div class="callout warning" style="margin-bottom:13px">SAMPLE LABEL — NOT VALID FOR COURIER HANDOVER</div>${labelHtml(s)}
+      <div style="display:flex;gap:8px;margin-top:15px" class="no-print"><button class="button primary" id="printLabel">Print label</button><button class="button" id="closeLabel">Close</button></div>`;
+    openModal();
+    $('#printLabel').onclick = () => {
+      const w = window.open('', '_blank', 'width=800,height=800');
+      if (!w) { toast('Allow pop-ups to print the sample label.'); return; }
+      w.document.write(`<!doctype html><html><head><title>DEMO label ${escapeHtml(s.awb)}</title><style>
+        body{font:13px Arial;padding:24px}.label-sheet{border:1px dashed #777;padding:20px;max-width:500px;margin:auto}
+        .label-brand{display:flex;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:10px}
+        .label-awb{font:bold 22px monospace}.label-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:15px 0}
+        .label-grid b{display:block;font-size:11px}.label-grid span{font-size:12px}.barcode{height:48px;background:repeating-linear-gradient(90deg,#111 0,#111 2px,white 2px,white 4px,#111 4px,#111 5px,white 5px,white 8px);margin:15px 0}
+        .label-foot{display:flex;justify-content:space-between;font-size:10px}@page{size:A6;margin:8mm}</style></head><body>${labelHtml(s)}<script>window.onload=()=>window.print()<\/script></body></html>`);
+      w.document.close();
+    };
+    $('#closeLabel').onclick = closeModal;
+  }
+
+  function download(name, rows) {
+    const csv = rows.map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+    toast('CSV export prepared.');
+  }
+
+  function exportShipments(list = state.shipments) {
+    download('teraship-shipments.csv', [['AWB', 'Shipment ID', 'Customer', 'Courier', 'Sender city', 'Receiver', 'Destination city', 'PIN', 'Weight kg', 'Payment type', 'Charge INR', 'COD INR', 'Status', 'Booked at'],
+      ...list.map(s => [s.awb, s.id, s.customer, s.courier, s.senderCity, s.receiver, s.receiverCity, s.receiverPin, s.weight, s.service, s.amount, s.cod, s.status, s.created])]);
+  }
+  function exportCOD() {
+    download('teraship-cod.csv', [['AWB', 'Customer', 'Courier', 'COD INR', 'Status', 'Reconciliation'],
+      ...state.shipments.filter(s => s.service === 'COD').map(s => [s.awb, s.customer, s.courier, s.cod, s.status, 'Not reconciled'])]);
+  }
+  function exportCustomers() {
+    download('teraship-customers.csv', [['Customer ID', 'Name', 'Phone', 'Email', 'City', 'Shipments'],
+      ...state.customers.map(c => [c.id, c.name, c.phone, c.email, c.city, state.shipments.filter(s => s.customerId === c.id).length])]);
+  }
+  function exportCourier() {
+    download('teraship-courier-performance.csv', [['Courier', 'Shipments', 'Booked', 'In Transit', 'Out for Delivery', 'Delivered'],
+      ...state.couriers.map(c => [c.name, state.shipments.filter(s => s.courierId === c.id).length,
+        ...['Booked', 'In Transit', 'Out for Delivery', 'Delivered'].map(st => state.shipments.filter(s => s.courierId === c.id && s.status === st).length)])]);
+  }
+
+  function addCustomer() {
+    $('#modalTitle').textContent = 'Add customer account';
+    $('#modalBody').innerHTML = `<form id="customerForm"><div class="form-fields">
+      <div class="field"><label>Business / customer name *</label><input id="newName" required></div>
+      <div class="field"><label>Mobile number *</label><input id="newPhone" required inputmode="tel"></div>
+      <div class="field"><label>Email</label><input id="newEmail" type="email"></div>
+      <div class="field"><label>City *</label><input id="newCity" required></div>
+      <div class="field full"><label>Address</label><input id="newAddress"></div>
+      <div class="field"><label>State</label><input id="newState"></div>
+      <div class="field"><label>PIN code</label><input id="newPincode" inputmode="numeric" maxlength="6"></div>
+      </div><div style="margin-top:18px;display:flex;gap:8px"><button class="button primary">Save customer</button><button class="button" type="button" id="cancelCustomer">Cancel</button></div></form>`;
+    openModal();
+    $('#cancelCustomer').onclick = closeModal;
+    $('#customerForm').onsubmit = async e => {
+      e.preventDefault();
+      const value = id => $('#' + id).value.trim();
+      const payload = {
+        organization_id: profile.organization_id,
+        name: value('newName'),
+        phone: value('newPhone'),
+        email: value('newEmail') || null,
+        city: value('newCity'),
+        address: value('newAddress') || null,
+        state: value('newState') || null,
+        pincode: value('newPincode') || null
+      };
+      const submit = $('#customerForm').querySelector('[type="submit"]');
+      submit.disabled = true; submit.textContent = 'Saving…';
+      try {
+        const { error } = await db.from('customers').insert(payload);
+        if (error) throw error;
+        await loadData();
+        closeModal(); render();
+        toast('Customer saved to Supabase.');
+      } catch (error) {
+        showError('Could not save customer', error);
+        submit.disabled = false; submit.textContent = 'Save customer';
+      }
+    };
+  }
+
+  function customerDetails(id) {
+    const c = state.customers.find(x => x.id === id);
+    if (!c) return;
+    const shipments = state.shipments.filter(s => s.customerId === id);
+    $('#modalTitle').textContent = c.name;
+    $('#modalBody').innerHTML = `<div class="grid billing-grid"><div class="billing-stat"><span>Shipments</span><b>${shipments.length}</b></div><div class="billing-stat"><span>Account balance</span><b>Not configured</b></div><div class="billing-stat"><span>Delivered</span><b>${shipments.filter(s => s.status === 'Delivered').length}</b></div></div>
+      <p><b>Phone:</b> ${escapeHtml(c.phone)}<br><b>Email:</b> ${escapeHtml(c.email)}<br><b>City:</b> ${escapeHtml(c.city)}<br><b>Address:</b> ${escapeHtml(c.address)}</p>
+      <h3 style="font-size:13px">Recent shipments</h3><div class="table-wrap"><table><thead><tr><th>AWB</th><th>Courier</th><th>Status</th></tr></thead><tbody>
+      ${shipments.map(s => `<tr><td class="mono">${escapeHtml(s.awb)}</td><td>${escapeHtml(s.courier)}</td><td>${badge(s.status)}</td></tr>`).join('') || '<tr><td colspan="3">No shipments yet</td></tr>'}</tbody></table></div>`;
+    openModal();
+  }
+
+  function customerStatement(id) {
+    const c = state.customers.find(x => x.id === id);
+    if (!c) return;
+    const shipments = state.shipments.filter(s => s.customerId === id);
+    download(`customer-${String(c.id).slice(0, 8)}-statement.csv`, [['AWB', 'Date', 'Courier', 'Destination', 'Charge INR', 'COD INR', 'Status'],
+      ...shipments.map(s => [s.awb, s.created, s.courier, s.receiverCity, s.amount, s.cod, s.status])]);
+  }
+
+  async function advanceStatus(awb) {
+    const s = state.shipments.find(x => x.awb === awb);
+    if (!s) return;
+    const sequence = ['Booked', 'In Transit', 'Out for Delivery', 'Delivered'];
+    const index = sequence.indexOf(s.status);
+    const next = sequence[Math.min(Math.max(index, 0) + 1, sequence.length - 1)];
+    if (next === s.status) { toast('Shipment is already marked delivered.'); return; }
+    try {
+      const { error } = await db.from('shipments').update({ status: next }).eq('id', s.id);
+      if (error) throw error;
+      await loadData();
+      if (state.page === 'tracking') $('#trackingResult').innerHTML = renderTracking(awb);
+      else render();
+      toast('TeraShip status updated to ' + next + '. This is not a courier tracking update.');
+    } catch (error) { showError('Could not update shipment status', error); }
+  }
+
+  document.addEventListener('click', async e => {
+    const page = e.target.closest('[data-page]');
+    if (page) { state.page = page.dataset.page; render(); return; }
+    const action = e.target.closest('[data-action]');
+    if (!action) return;
+    const a = action.dataset.action;
+    if (a === 'export') exportShipments();
+    if (a === 'exportCOD') exportCOD();
+    if (a === 'exportCustomers') exportCustomers();
+    if (a === 'exportCourier') exportCourier();
+    if (a === 'track') { state.trackingQuery = action.dataset.awb; state.page = 'tracking'; render(); return; }
+    if (a === 'label') {
+      const shipment = state.shipments.find(x => x.awb === action.dataset.awb);
+      if (shipment) showLabel(shipment);
+    }
+    if (a === 'advance') await advanceStatus(action.dataset.awb);
+    if (a === 'addCustomer') addCustomer();
+    if (a === 'customerDetails') customerDetails(action.dataset.id);
+    if (a === 'customerStatement') customerStatement(action.dataset.id);
+    if (a === 'resetBooking') { state.selectedRate = null; state.selectedCourierId = ''; render(); }
+  });
+
+  $('#modalClose')?.addEventListener('click', closeModal);
+  $('#modalBackdrop')?.addEventListener('click', e => { if (e.target.id === 'modalBackdrop') closeModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  $('#mobileMenu')?.addEventListener('click', () => $('#sidebar')?.classList.toggle('open'));
+  $('#dismissBanner')?.addEventListener('click', () => $('.demo-banner')?.classList.add('hidden'));
+  $('#helpBtn')?.addEventListener('click', () => {
+    $('#modalTitle').textContent = 'About TeraShip';
+    $('#modalBody').innerHTML = `<p><b>TeraShip by TeraSyncTech</b> stores customer and shipment records in your Supabase organization.</p>
+      <ul><li>Customer and shipment records are database-backed.</li><li>Courier prices are illustrative.</li><li>AWB references and labels are demo-only.</li><li>Tracking is not connected to courier networks.</li><li>Live courier booking requires authorized carrier APIs and backend integration.</li></ul>
+      <div class="callout warning">Do not use the demo label as a real shipping label. Do not store payment-card data or publish secret keys.</div>`;
+    openModal();
+  });
+  $('#profileMenu')?.addEventListener('click', () => toast(authUser?.email || 'Signed-in administrator'));
+  if ($('#year')) $('#year').textContent = new Date().getFullYear();
+
+  async function start() {
+    const content = $('#pageContent');
+    if (content) content.innerHTML = '<div class="empty-state"><b>Connecting to TeraShip database…</b>Please wait.</div>';
+    try {
+      await loadData();
+      render();
+    } catch (error) {
+      console.error('TeraShip startup error:', error);
+      if (content) content.innerHTML = `<div class="empty-state"><b>Could not load TeraShip data</b>${escapeHtml(error?.message || 'Check the Supabase connection and table permissions.')}</div>`;
+      toast('Database connection failed. Check the browser console or Supabase policies.');
+    }
+  }
+
+  start();
 })();
