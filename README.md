@@ -26,3 +26,11 @@ Open `index.html` in a modern browser, or publish the folder to GitHub Pages for
 7. Add payment gateway and COD reconciliation after merchant onboarding.
 
 Never put passwords, API secrets, OTPs or bank credentials in this public repository.
+
+
+## Supabase authentication setup (Stage 2)
+The project now includes a Supabase sign-in gate. It uses the project URL and browser-safe publishable key in `js/supabase-config.js`. The key is not a secret; never place a Supabase secret/service-role key in this repository.
+
+The login gate checks `public.profiles` and permits only profiles with role `admin` or `staff`. Your first administrator profile must already exist in Supabase. The existing dashboard modules are still prototype/local-storage modules at this stage; customer and shipment CRUD will be migrated to the database in the next development stage. Do not use this build for live shipment operations yet.
+
+Publish the complete folder contents to the GitHub Pages repository, preserving the `css` and `js` folders. For Vercel, import the repository and deploy the project root as a static site.
