@@ -1,23 +1,28 @@
-# Bluetech & Company — Multi-Courier Portal Demo
+# TeraShip — SwiftRoute Logistics edition
 
-This is a branded front-end demo adapted from the TeraShip multi-courier demo for presentation to **Bluetech & Company**.
+A front-end courier operations prototype branded for **SwiftRoute Logistics**, powered by **TeraShip by TeraSyncTech**.
 
-## Client details
-- Contact: Anshu Shekhar
-- Phone: +91 9955334078
-- Email: BLUETECHOPS@GMAIL.COM
-- Address: Near Ashok Nagar, Road No. 1, Ranchi – 834002
-- Services: International & Domestic Courier Services
+## Included modules
+- Dashboard and shipment list
+- Manual shipment booking records
+- Sample rate comparison
+- Manual/demo AWB tracking timeline
+- Customer accounts, billing, COD records and reports
+- Local browser storage for prototype data
 
-## Files
-- `index.html` — portal entry page
-- `css/style.css` — layout and branding styles
-- `js/app.js` — demo interface interactions
-- `assets/images/logo.png` — separately uploaded logo
-- `assets/images/client-visiting-card.jpeg` — reference copy of the visiting card
+## Current limitations
+This package is still a front-end prototype. Data is stored in the browser on the device where it is used. It has no secure user login, shared database, real courier booking, live rates, carrier tracking, payment processing or bank settlement. Courier names and sample rates are for demonstration only. Do not use sample AWBs or sample tracking events for real parcels.
 
-## Upload to GitHub
-Upload **all files and folders**, preserving the directory structure. The logo path is `assets/images/logo.png`.
+## Run locally
+Open `index.html` in a modern browser, or publish the folder to GitHub Pages for a public demonstration. GitHub Pages cannot host the secure backend needed for production.
 
-## Important
-This is a demo only. Shipment bookings, live courier rates/tracking, bank settlements and online payments are not connected. Real services require approved courier API access, a secure backend and a payment provider integration. Never put bank credentials, OTPs or secret API keys in public website files. Confirm permission before using courier company trademarks commercially.
+## Production roadmap
+1. Build a secure backend API and PostgreSQL database.
+2. Add admin, staff and customer authentication with role permissions.
+3. Convert booking to manual operational records with real AWB entry.
+4. Add printable shipping labels and invoices.
+5. Add audited manual tracking event entry.
+6. Integrate courier APIs only after written authorization and credentials are obtained.
+7. Add payment gateway and COD reconciliation after merchant onboarding.
+
+Never put passwords, API secrets, OTPs or bank credentials in this public repository.
