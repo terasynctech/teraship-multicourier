@@ -317,8 +317,9 @@
           </article>
         </section>
       </main>
-          const refreshButton = $('#tsRefreshBtn');
+    `;
 
+    const refreshButton = $('#tsRefreshBtn');
     if (refreshButton) {
       refreshButton.addEventListener('click', async () => {
         refreshButton.disabled = true;
