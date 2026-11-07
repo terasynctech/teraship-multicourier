@@ -1,4 +1,4 @@
-/* TeraShip application — Supabase-backed customer and shipment records.
+* TeraShip application — Supabase-backed customer and shipment records.
    Courier prices, AWBs, labels and tracking remain illustrative until real
    courier APIs/contracts are connected. Never place a Supabase service-role key here. */
 (() => {
