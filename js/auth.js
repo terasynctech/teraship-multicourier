@@ -48,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const { data: profile, error } = await db
       .from("profiles")
-      .select("role, full_name")
+     .select("role, full_name")
       .eq("id", user.id)
       .single();
 
@@ -66,9 +66,13 @@ document.addEventListener("DOMContentLoaded", () => {
       return false;
     }
 
-    loadDashboard();
-    return true;
-  }
+ 
+window.terashipUser = user;
+window.terashipProfile = profile;
+
+loadDashboard();
+return true;
+}
 
   if (!db) {
     showMessage("Supabase connection is missing. Please check supabase-config.js.");
