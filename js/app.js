@@ -315,7 +315,7 @@
               Courier pricing and tracking are demo-only until official courier integrations are connected.
             </p>
           </article>
-        </section>
+              </section>
       </main>
     `;
 
@@ -367,4 +367,4 @@
 
   start();
 })();
-    `;
+
