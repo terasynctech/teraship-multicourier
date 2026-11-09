@@ -1071,14 +1071,41 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
             <h2>Tracking History</h2>
             ${
               events.length
-                ? events.map(event => `
-                  <div style="padding:12px 0;border-bottom:1px solid #ddd">
-                    <strong>${safe(event.status)}</strong>
-                    <p>${safe(event.location || 'Location not updated')}</p>
-                    <p>${safe(event.remarks || '')}</p>
-                    <small>${safe(shortDate(event.event_time))}</small>
-                  </div>
-                `).join('')
+               events.map((event, index) => `
+  <div style="
+    display:flex;
+    gap:14px;
+    padding:14px 0;
+    border-bottom:1px solid #e5e7eb;
+  ">
+    <div style="
+      width:12px;
+      height:12px;
+      min-width:12px;
+      margin-top:5px;
+      border-radius:50%;
+      background:${event.status === 'delivered' ? '#16a34a' : '#2563eb'};
+    "></div>
+
+    <div>
+      <strong style="font-size:15px">
+        ${safe(String(event.status || '').replaceAll('_', ' ').toUpperCase())}
+      </strong>
+
+      <p style="margin:5px 0;color:#64748b">
+        ${safe(event.location || 'Location not updated')}
+      </p>
+
+      <p style="margin:5px 0">
+        ${safe(event.remarks || '')}
+      </p>
+
+      <small style="color:#94a3b8">
+        ${safe(shortDate(event.event_time))}
+      </small>
+    </div>
+  </div>
+`).join('')
                 : '<p>No tracking updates have been added yet.</p>'
             }
           </section>
