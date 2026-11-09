@@ -997,9 +997,10 @@
       } catch (error) {
         resultHost.innerHTML =
           '<p>Tracking error: ' + safe(error.message) + '</p>';
-      }
-    })
+         }
+    });
   }
+
   async function start() {
     showMessage(
       'Loading TeraShip dashboard',
