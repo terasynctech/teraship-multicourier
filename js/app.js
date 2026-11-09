@@ -663,7 +663,7 @@
   <label>Select Customer</label>
   <select id="invoiceCustomer">
     <option value="">Select a customer</option>
-    ${customers.map(customer => `
+    ${billingCustomers.map(customer => `
       <option value="${safe(customer.id)}">
         ${safe(customer.name)} - ${safe(customer.phone || '')}
       </option>
