@@ -904,6 +904,57 @@
       </main>
     `;
   }
+     async function saveTrackingUpdate(event) {
+    event.preventDefault();
+
+    const message = $('#adminTrackingMessage');
+    const awb = $('#adminTrackingAwb').value.trim();
+
+    message.textContent = 'Saving tracking update...';
+
+    try {
+      const { data: shipment, error: shipmentError } = await db
+        .from('shipments')
+        .select('id, organization_id, awb_number')
+        .eq('awb_number', awb)
+        .maybeSingle();
+
+      if (shipmentError) throw shipmentError;
+      if (!shipment) throw new Error('Shipment not found.');
+
+      const update = {
+        organization_id: shipment.organization_id,
+        shipment_id: shipment.id,
+        status: $('#adminTrackingStatus').value,
+        location: $('#adminTrackingLocation').value.trim(),
+        remarks: $('#adminTrackingRemarks').value.trim(),
+        event_time: new Date().toISOString()
+      };
+
+      const { error: insertError } = await db
+        .from('tracking_events')
+        .insert(update);
+
+      if (insertError) throw insertError;
+
+      const { error: statusError } = await db
+        .from('shipments')
+        .update({ status: update.status })
+        .eq('id', shipment.id);
+
+      if (statusError) throw statusError;
+
+      message.textContent = 'Tracking update saved successfully!';
+
+      $('#adminTrackingForm').reset();
+
+      $('#trackingAwb').value = awb;
+      $('#trackingSearchForm').requestSubmit();
+
+    } catch (error) {
+      message.textContent = 'Error: ' + error.message;
+    }
+  }
      async function loadTrackingPage() {
     const host = $('#pageContent');
     if (!host) return;
@@ -930,9 +981,47 @@
         </section>
 
         <div id="trackingResult"></div>
+
+<section class="ts-panel" style="margin-top:20px">
+  <h2>Admin: Add Tracking Update</h2>
+
+  <form id="adminTrackingForm">
+    <div class="form-fields">
+      <div class="field">
+        <label>AWB Number</label>
+        <input id="adminTrackingAwb" required placeholder="Enter AWB number">
+      </div>
+
+      <div class="field">
+        <label>Shipment Status</label>
+        <select id="adminTrackingStatus" required>
+          <option value="picked_up">Picked Up</option>
+          <option value="in_transit">In Transit</option>
+          <option value="out_for_delivery">Out for Delivery</option>
+          <option value="delivered">Delivered</option>
+          <option value="returned">Returned</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Current Location</label>
+        <input id="adminTrackingLocation" placeholder="Enter current location">
+      </div>
+
+      <div class="field">
+        <label>Remarks</label>
+        <input id="adminTrackingRemarks" placeholder="Enter remarks">
+      </div>
+    </div>
+
+    <button class="ts-btn" type="submit">Save Tracking Update</button>
+  </form>
+
+  <p id="adminTrackingMessage"></p>
+</section>
       </main>
     `;
-
+$('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
     $('#trackingSearchForm').addEventListener('submit', async event => {
       event.preventDefault();
 
