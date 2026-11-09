@@ -904,6 +904,102 @@
       </main>
     `;
   }
+     async function loadTrackingPage() {
+    const host = $('#pageContent');
+    if (!host) return;
+
+    host.innerHTML = `
+      <main class="ts-dashboard">
+        <header class="ts-head">
+          <div>
+            <h1>Shipment Tracking</h1>
+            <p class="ts-muted">Search and track your shipments using an AWB number.</p>
+          </div>
+        </header>
+
+        <section class="ts-panel">
+          <form id="trackingSearchForm">
+            <div class="form-fields">
+              <div class="field">
+                <label>Enter AWB Number</label>
+                <input id="trackingAwb" placeholder="Example: TS421311038165" required>
+              </div>
+            </div>
+            <button class="ts-btn" type="submit">Track Shipment</button>
+          </form>
+        </section>
+
+        <div id="trackingResult"></div>
+      </main>
+    `;
+
+    $('#trackingSearchForm').addEventListener('submit', async event => {
+      event.preventDefault();
+
+      const awb = $('#trackingAwb').value.trim();
+      const resultHost = $('#trackingResult');
+
+      resultHost.innerHTML = '<p>Searching shipment...</p>';
+
+      try {
+        const result = await db
+          .from('shipments')
+          .select('*')
+          .eq('awb_number', awb)
+          .maybeSingle();
+
+        if (result.error) throw result.error;
+
+        if (!result.data) {
+          resultHost.innerHTML = '<p>No shipment found with this AWB number.</p>';
+          return;
+        }
+
+        const shipment = result.data;
+
+        const history = await db
+          .from('tracking_events')
+          .select('*')
+          .eq('shipment_id', shipment.id)
+          .order('event_time', { ascending: false });
+
+        if (history.error) throw history.error;
+
+        const events = history.data || [];
+
+        resultHost.innerHTML = `
+          <section class="ts-panel" style="margin-top:20px">
+            <h2>Shipment Details</h2>
+            <p><strong>AWB:</strong> ${safe(shipment.awb_number)}</p>
+            <p><strong>Receiver:</strong> ${safe(shipment.receiver_name)}</p>
+            <p><strong>Mobile:</strong> ${safe(shipment.receiver_phone)}</p>
+            <p><strong>Destination:</strong> ${safe(shipment.receiver_city)}, ${safe(shipment.receiver_state)}</p>
+            <p><strong>Courier:</strong> ${safe(couriers.find(c => c.id === shipment.courier_id)?.name || '—')}</p>
+            <p><strong>Current Status:</strong> ${safe(shipment.status)}</p>
+          </section>
+
+          <section class="ts-panel" style="margin-top:20px">
+            <h2>Tracking History</h2>
+            ${
+              events.length
+                ? events.map(event => `
+                  <div style="padding:12px 0;border-bottom:1px solid #ddd">
+                    <strong>${safe(event.status)}</strong>
+                    <p>${safe(event.location || 'Location not updated')}</p>
+                    <p>${safe(event.remarks || '')}</p>
+                    <small>${safe(shortDate(event.event_time))}</small>
+                  </div>
+                `).join('')
+                : '<p>No tracking updates have been added yet.</p>'
+            }
+          </section>
+        `;
+      } catch (error) {
+        resultHost.innerHTML =
+          '<p>Tracking error: ' + safe(error.message) + '</p>';
+      }
+    })
+  }
   async function start() {
     showMessage(
       'Loading TeraShip dashboard',
@@ -955,6 +1051,8 @@
   loadShipmentsPage();
 } else if (page === 'booking') {
   loadBookingPage();
+} else if (page === 'tracking') {
+  loadTrackingPage();
 } else {
   showMessage(
     pageNames[page],
