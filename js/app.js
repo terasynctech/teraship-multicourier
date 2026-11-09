@@ -1189,22 +1189,25 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
     `;
 
     try {
-      const [invoiceResult, codResult] = await Promise.all([
-        db.from('invoices')
-          .select('*')
-          .order('created_at', { ascending: false }),
+      const [invoiceResult, codResult, customerResult] = await Promise.all([
+  db.from('invoices')
+    .select('*')
+    .order('created_at', { ascending: false }),
 
-        db.from('cod_records')
-          .select('*')
-          .order('created_at', { ascending: false })
-      ]);
+  db.from('cod_records')
+    .select('*')
+    .order('created_at', { ascending: false }),
 
+  db.from('customers')
+    .select('id, name, phone')
+    .order('created_at', { ascending: false })
+]);
       if (invoiceResult.error) throw invoiceResult.error;
       if (codResult.error) throw codResult.error;
-
+if (customerResult.error) throw customerResult.error;
       const invoices = invoiceResult.data || [];
       const codRecords = codResult.data || [];
-
+const billingCustomers = customerResult.data || [];
       const totalInvoices = invoices.reduce(
         (sum, invoice) => sum + Number(invoice.total_amount || 0), 0
       );
