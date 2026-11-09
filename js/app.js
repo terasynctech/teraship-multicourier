@@ -604,6 +604,234 @@
       }
     });
   }
+   
+  async function loadBookingPage() {
+    const host = $('#pageContent');
+    if (!host) return;
+
+    host.innerHTML = '<p>Loading booking form...</p>';
+
+    try {
+      await getAuthenticatedUser();
+
+      const results = await Promise.all([
+        db.from('customers')
+          .select('id, name, phone, address, city, state, pincode')
+          .order('name'),
+        db.from('couriers')
+          .select('id, name, active')
+          .eq('active', true)
+          .order('name')
+      ]);
+
+      if (results[0].error) throw results[0].error;
+      if (results[1].error) throw results[1].error;
+
+      customers = results[0].data || [];
+      couriers = results[1].data || [];
+
+      renderBookingPage();
+    } catch (error) {
+      showMessage('Booking form could not load', error.message, true);
+    }
+  }
+
+  function renderBookingPage() {
+    const host = $('#pageContent');
+    if (!host) return;
+
+    const customerOptions = customers.map(c =>
+      `<option value="${safe(c.id)}">${safe(c.name)} — ${safe(c.phone || '')}</option>`
+    ).join('');
+
+    const courierOptions = couriers.map(c =>
+      `<option value="${safe(c.id)}">${safe(c.name)}</option>`
+    ).join('');
+
+    host.innerHTML = `
+      <main class="ts-dashboard">
+        <header class="ts-head">
+          <div>
+            <h1>New Shipment Booking</h1>
+            <p class="ts-muted">Create a shipment using your saved customers and courier services.</p>
+          </div>
+        </header>
+
+        <section class="ts-panel">
+          <form id="bookingForm">
+            <h2>Customer & Courier</h2>
+
+            <div class="form-fields">
+              <div class="field">
+                <label>Select Customer *</label>
+                <select id="bookCustomer" required>
+                  <option value="">Choose customer</option>
+                  ${customerOptions}
+                </select>
+              </div>
+
+              <div class="field">
+                <label>Courier Company *</label>
+                <select id="bookCourier" required>
+                  <option value="">Choose courier</option>
+                  ${courierOptions}
+                </select>
+              </div>
+            </div>
+
+            <h2 style="margin-top:25px">Receiver Details</h2>
+
+            <div class="form-fields">
+              <div class="field">
+                <label>Receiver Name *</label>
+                <input id="bookReceiver" required>
+              </div>
+              <div class="field">
+                <label>Receiver Mobile *</label>
+                <input id="bookPhone" required>
+              </div>
+              <div class="field full">
+                <label>Receiver Address *</label>
+                <textarea id="bookAddress" required></textarea>
+              </div>
+              <div class="field">
+                <label>City *</label>
+                <input id="bookCity" required>
+              </div>
+              <div class="field">
+                <label>State *</label>
+                <input id="bookState" required>
+              </div>
+              <div class="field">
+                <label>PIN Code *</label>
+                <input id="bookPincode" maxlength="6" required>
+              </div>
+            </div>
+
+            <h2 style="margin-top:25px">Parcel & Payment</h2>
+
+            <div class="form-fields">
+              <div class="field">
+                <label>Weight (KG) *</label>
+                <input id="bookWeight" type="number" min="0.01" step="0.01" required>
+              </div>
+
+              <div class="field">
+                <label>Payment Mode *</label>
+                <select id="bookPayment" required>
+                  <option value="Prepaid">Prepaid</option>
+                  <option value="COD">Cash on Delivery (COD)</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label>COD Amount (₹)</label>
+                <input id="bookCOD" type="number" min="0" step="0.01" value="0">
+              </div>
+
+              <div class="field">
+                <label>Courier Charge (₹)</label>
+                <input id="bookCourierCharge" type="number" min="0" step="0.01" value="0" required>
+              </div>
+
+              <div class="field">
+                <label>Customer Charge (₹)</label>
+                <input id="bookCustomerCharge" type="number" min="0" step="0.01" value="0" required>
+              </div>
+
+              <div class="field full">
+                <label>Shipment Notes</label>
+                <textarea id="bookNotes" placeholder="Optional notes"></textarea>
+              </div>
+            </div>
+
+            <p class="ts-muted" style="margin-top:15px">
+              Demo booking only. Courier prices, AWB numbers and tracking are not connected to real courier systems.
+            </p>
+
+            <button class="ts-btn" id="bookSave" type="submit">
+              Save Shipment Booking
+            </button>
+          </form>
+        </section>
+      </main>
+    `;
+
+    $('#bookingForm').addEventListener('submit', async event => {
+      event.preventDefault();
+
+      const button = $('#bookSave');
+      button.disabled = true;
+      button.textContent = 'Saving booking...';
+
+      try {
+        const customerId = $('#bookCustomer').value;
+        const customer = customers.find(c => c.id === customerId);
+
+        if (!customer) throw new Error('Please select a valid customer.');
+
+        const paymentMode = $('#bookPayment').value;
+        const codAmount = Number($('#bookCOD').value || 0);
+
+        if (paymentMode === 'COD' && codAmount <= 0) {
+          throw new Error('Enter a valid COD amount.');
+        }
+
+        if (!currentProfile?.organization_id) {
+          throw new Error('Your organization ID is missing.');
+        }
+
+        const demoAwb = 'TS' +
+          Date.now().toString().slice(-10) +
+          Math.floor(Math.random() * 90 + 10);
+
+        const payload = {
+          organization_id: currentProfile.organization_id,
+          customer_id: customerId,
+          courier_id: $('#bookCourier').value,
+          awb_number: demoAwb,
+          booking_date: todayKey(),
+          sender_name: currentProfile.full_name || 'SwiftRoute Logistics',
+          sender_phone: '',
+          sender_address: '',
+          sender_pincode: '',
+          receiver_name: $('#bookReceiver').value.trim(),
+          receiver_phone: $('#bookPhone').value.trim(),
+          receiver_address: $('#bookAddress').value.trim(),
+          receiver_city: $('#bookCity').value.trim(),
+          receiver_state: $('#bookState').value.trim(),
+          receiver_pincode: $('#bookPincode').value.trim(),
+          weight: Number($('#bookWeight').value),
+          payment_mode: paymentMode,
+          cod_amount: paymentMode === 'COD' ? codAmount : 0,
+          courier_charge: Number($('#bookCourierCharge').value),
+          customer_charge: Number($('#bookCustomerCharge').value),
+          status: 'booked',
+          notes: $('#bookNotes').value.trim() || null,
+          created_by: currentUser.id
+        };
+
+        if (!payload.courier_id) {
+          throw new Error('Please select a courier company.');
+        }
+
+        const result = await db.from('shipments').insert(payload);
+
+        if (result.error) throw result.error;
+
+        alert('Demo shipment booking saved successfully. Demo AWB: ' + demoAwb);
+
+        await loadDashboardData();
+        await loadShipmentsPage();
+
+      } catch (error) {
+        alert('Booking failed: ' + error.message);
+        button.disabled = false;
+        button.textContent = 'Save Shipment Booking';
+      }
+    });
+  }
+
   async function start() {
     showMessage(
       'Loading TeraShip dashboard',
@@ -649,9 +877,11 @@
 
           if (page === 'dashboard') {
         renderDashboard();
-      } else if (page === 'customers') {
-        loadCustomersPage();
-      } else {
+     } else if (page === 'customers') {
+  loadCustomersPage();
+} else if (page === 'booking') {
+  loadBookingPage();
+} else {
         showMessage(
           pageNames[page],
           'Navigation is working. This section will be configured next.'
