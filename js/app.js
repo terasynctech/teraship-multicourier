@@ -831,7 +831,78 @@
       }
     });
   }
+  async function loadShipmentsPage() {
+    const host = $('#pageContent');
+    if (!host) return;
 
+    host.innerHTML = '<p>Loading shipments...</p>';
+
+    try {
+      await loadDashboardData();
+      renderShipmentsPage();
+    } catch (error) {
+      showMessage('Shipments could not load', error.message, true);
+    }
+  }
+
+  function renderShipmentsPage() {
+    const host = $('#pageContent');
+    if (!host) return;
+
+    const courierMap = new Map(
+      couriers.map(c => [c.id, c.name])
+    );
+
+    const rows = shipments.map(s => `
+      <tr>
+        <td>${safe(s.awb_number || '—')}</td>
+        <td>${safe(shortDate(s.booking_date))}</td>
+        <td>${safe(s.receiver_name || '—')}</td>
+        <td>${safe(s.receiver_city || '—')}</td>
+        <td>${safe(courierMap.get(s.courier_id) || '—')}</td>
+        <td>${money(s.customer_charge || 0)}</td>
+        <td>${safe(s.status || 'Booked')}</td>
+      </tr>
+    `).join('');
+
+    host.innerHTML = `
+      <main class="ts-dashboard">
+        <header class="ts-head">
+          <div>
+            <h1>Shipments</h1>
+            <p class="ts-muted">View all shipment bookings.</p>
+          </div>
+        </header>
+
+        <section class="ts-panel">
+          <h2>Shipment List</h2>
+
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th>AWB Number</th>
+                  <th>Booking Date</th>
+                  <th>Receiver</th>
+                  <th>City</th>
+                  <th>Courier</th>
+                  <th>Customer Charge</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows || `
+                  <tr>
+                    <td colspan="7">No shipments booked yet.</td>
+                  </tr>
+                `}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    `;
+  }
   async function start() {
     showMessage(
       'Loading TeraShip dashboard',
@@ -875,18 +946,20 @@
       const crumb = document.getElementById('pageCrumb');
       if (crumb) crumb.textContent = pageNames[page] || 'Dashboard';
 
-          if (page === 'dashboard') {
-        renderDashboard();
-     } else if (page === 'customers') {
+        if (page === 'dashboard') {
+  renderDashboard();
+} else if (page === 'customers') {
   loadCustomersPage();
+} else if (page === 'shipments') {
+  loadShipmentsPage();
 } else if (page === 'booking') {
   loadBookingPage();
 } else {
-        showMessage(
-          pageNames[page],
-          'Navigation is working. This section will be configured next.'
-        );
-      }
+  showMessage(
+    pageNames[page],
+    'Navigation is working. This section will be configured next.'
+  );
+}
 
       document.getElementById('sidebar')?.classList.remove('open');
     });
