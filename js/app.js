@@ -364,7 +364,43 @@
       );
     }
   }
+  // TeraShip sidebar navigation
+  const pageNames = {
+    dashboard: 'Dashboard',
+    shipments: 'Shipments',
+    booking: 'Book a shipment',
+    tracking: 'Track shipment',
+    customers: 'Customers',
+    billing: 'Billing & COD',
+    reports: 'Reports',
+    settings: 'Settings & integrations'
+  };
 
+  document.querySelectorAll('.nav-item[data-page]').forEach(button => {
+    button.addEventListener('click', () => {
+      const page = button.dataset.page;
+
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+      });
+
+      button.classList.add('active');
+
+      const crumb = document.getElementById('pageCrumb');
+      if (crumb) crumb.textContent = pageNames[page] || 'Dashboard';
+
+      if (page === 'dashboard') {
+        renderDashboard();
+      } else {
+        showMessage(
+          pageNames[page],
+          'Navigation is working. This section will be configured next.'
+        );
+      }
+
+      document.getElementById('sidebar')?.classList.remove('open');
+    });
+  });
   start();
 })();
 
