@@ -1069,9 +1069,9 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
 
           <section class="ts-panel" style="margin-top:20px">
             <h2>Tracking History</h2>
-            ${
-              events.length
-               events.map((event, index) => `
+           ${
+  events.length
+    ? events.map((event, index) => `
   <div style="
     display:flex;
     gap:14px;
