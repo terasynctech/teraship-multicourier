@@ -1282,7 +1282,7 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
       const crumb = document.getElementById('pageCrumb');
       if (crumb) crumb.textContent = pageNames[page] || 'Dashboard';
 
-        if (page === 'dashboard') {
+         if (page === 'dashboard') {
   renderDashboard();
 } else if (page === 'customers') {
   loadCustomersPage();
