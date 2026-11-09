@@ -858,7 +858,7 @@
         <td>${safe(s.awb_number || '—')}</td>
         <td>${safe(shortDate(s.booking_date))}</td>
         <td>${safe(s.receiver_name || '—')}</td>
-);
+
         <td>${safe(s.receiver_city || '—')}</td>
         <td>${safe(courierMap.get(s.courier_id) || '—')}</td>
         <td>${money(s.customer_charge || 0)}</td>
