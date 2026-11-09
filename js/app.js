@@ -345,7 +345,265 @@
       });
     }
   }
+  async function loadCustomersPage() {
+    const host = $('#pageContent');
+    if (!host) return;
 
+    host.innerHTML = '<div class="empty-state">Loading customers...</div>';
+
+    try {
+      const result = await db.from('customers')
+        .select('id, name, phone, email, address, city, state, pincode, gst_number, created_at')
+        .order('created_at', { ascending: false });
+
+      if (result.error) throw result.error;
+
+      customers = result.data || [];
+      renderCustomersPage();
+    } catch (error) {
+      showMessage('Customers could not load', error.message, true);
+    }
+  }
+
+  function renderCustomersPage() {
+    const host = $('#pageContent');
+    if (!host) return;
+
+    host.innerHTML = `
+      <div class="page-heading">
+        <div>
+          <h1>Customers</h1>
+          <p>Manage your courier customers and their contact details.</p>
+        </div>
+      </div>
+
+      <section class="panel" style="margin-bottom:18px">
+        <h2 id="customerFormTitle">Add New Customer</h2>
+
+        <form id="customerForm">
+          <input type="hidden" id="customerId">
+
+          <div class="form-fields">
+            <div class="field">
+              <label>Customer Name *</label>
+              <input id="customerName" required placeholder="Enter customer name">
+            </div>
+
+            <div class="field">
+              <label>Mobile Number *</label>
+              <input id="customerPhone" required placeholder="Mobile number">
+            </div>
+
+            <div class="field">
+              <label>Email</label>
+              <input id="customerEmail" type="email" placeholder="Email address">
+            </div>
+
+            <div class="field">
+              <label>GST Number</label>
+              <input id="customerGST" placeholder="GST number">
+            </div>
+
+            <div class="field full">
+              <label>Address</label>
+              <textarea id="customerAddress" placeholder="Full address"></textarea>
+            </div>
+
+            <div class="field">
+              <label>City</label>
+              <input id="customerCity" placeholder="City">
+            </div>
+
+            <div class="field">
+              <label>State</label>
+              <input id="customerState" placeholder="State">
+            </div>
+
+            <div class="field">
+              <label>PIN Code</label>
+              <input id="customerPincode" maxlength="6" placeholder="PIN code">
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:18px">
+            <button class="button primary" type="submit" id="customerSave">
+              Save Customer
+            </button>
+            <button class="button" type="button" id="customerCancel">
+              Clear Form
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Customer List (${customers.length})</h2>
+        </div>
+
+        <div class="toolbar">
+          <div class="searchbox">
+            <input id="customerSearch" placeholder="Search by name or mobile number">
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Mobile</th>
+                <th>Email</th>
+                <th>City</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customerRows"></tbody>
+          </table>
+        </div>
+      </section>
+    `;
+
+    const rows = $('#customerRows');
+
+    function drawRows(search = '') {
+      const term = search.toLowerCase();
+
+      const filtered = customers.filter(c =>
+        String(c.name || '').toLowerCase().includes(term) ||
+        String(c.phone || '').toLowerCase().includes(term)
+      );
+
+      rows.innerHTML = filtered.length
+        ? filtered.map(c => `
+          <tr>
+            <td><b>${safe(c.name)}</b></td>
+            <td>${safe(c.phone || '—')}</td>
+            <td>${safe(c.email || '—')}</td>
+            <td>${safe(c.city || '—')}</td>
+            <td>
+              <button class="button small" data-edit="${safe(c.id)}">Edit</button>
+              <button class="button small danger" data-delete="${safe(c.id)}">Delete</button>
+            </td>
+          </tr>
+        `).join('')
+        : '<tr><td colspan="5" class="empty-state">No customers found.</td></tr>';
+    }
+
+    drawRows();
+
+    $('#customerSearch').addEventListener('input', event => {
+      drawRows(event.target.value);
+    });
+
+    function clearCustomerForm() {
+      $('#customerForm').reset();
+      $('#customerId').value = '';
+      $('#customerFormTitle').textContent = 'Add New Customer';
+      $('#customerSave').textContent = 'Save Customer';
+    }
+
+    $('#customerCancel').addEventListener('click', clearCustomerForm);
+
+    $('#customerForm').addEventListener('submit', async event => {
+      event.preventDefault();
+
+      const saveButton = $('#customerSave');
+      saveButton.disabled = true;
+      saveButton.textContent = 'Saving...';
+
+      try {
+        const payload = {
+          name: $('#customerName').value.trim(),
+          phone: $('#customerPhone').value.trim(),
+          email: $('#customerEmail').value.trim() || null,
+          gst_number: $('#customerGST').value.trim() || null,
+          address: $('#customerAddress').value.trim() || null,
+          city: $('#customerCity').value.trim() || null,
+          state: $('#customerState').value.trim() || null,
+          pincode: $('#customerPincode').value.trim() || null
+        };
+
+        const id = $('#customerId').value;
+
+        let result;
+
+        if (id) {
+          result = await db.from('customers')
+            .update(payload)
+            .eq('id', id);
+        } else {
+          if (!currentProfile?.organization_id) {
+            throw new Error('Your organization ID is missing from your profile.');
+          }
+
+          payload.organization_id = currentProfile.organization_id;
+
+          result = await db.from('customers').insert(payload);
+        }
+
+        if (result.error) throw result.error;
+
+        alert(id ? 'Customer updated successfully.' : 'Customer added successfully.');
+
+        await loadCustomersPage();
+
+      } catch (error) {
+        alert('Could not save customer: ' + error.message);
+      } finally {
+        const button = $('#customerSave');
+        if (button) {
+          button.disabled = false;
+          button.textContent = 'Save Customer';
+        }
+      }
+    });
+
+    rows.addEventListener('click', async event => {
+      const editButton = event.target.closest('[data-edit]');
+      const deleteButton = event.target.closest('[data-delete]');
+
+      if (editButton) {
+        const customer = customers.find(c => c.id === editButton.dataset.edit);
+        if (!customer) return;
+
+        $('#customerId').value = customer.id;
+        $('#customerName').value = customer.name || '';
+        $('#customerPhone').value = customer.phone || '';
+        $('#customerEmail').value = customer.email || '';
+        $('#customerGST').value = customer.gst_number || '';
+        $('#customerAddress').value = customer.address || '';
+        $('#customerCity').value = customer.city || '';
+        $('#customerState').value = customer.state || '';
+        $('#customerPincode').value = customer.pincode || '';
+
+        $('#customerFormTitle').textContent = 'Edit Customer';
+        $('#customerSave').textContent = 'Update Customer';
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      if (deleteButton) {
+        const id = deleteButton.dataset.delete;
+
+        if (!confirm('Are you sure you want to delete this customer?')) return;
+
+        try {
+          const result = await db.from('customers')
+            .delete()
+            .eq('id', id);
+
+          if (result.error) throw result.error;
+
+          alert('Customer deleted successfully.');
+          await loadCustomersPage();
+
+        } catch (error) {
+          alert('Could not delete customer: ' + error.message);
+        }
+      }
+    });
+  }
   async function start() {
     showMessage(
       'Loading TeraShip dashboard',
@@ -389,8 +647,10 @@
       const crumb = document.getElementById('pageCrumb');
       if (crumb) crumb.textContent = pageNames[page] || 'Dashboard';
 
-      if (page === 'dashboard') {
+          if (page === 'dashboard') {
         renderDashboard();
+      } else if (page === 'customers') {
+        loadCustomersPage();
       } else {
         showMessage(
           pageNames[page],
