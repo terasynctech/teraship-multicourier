@@ -655,12 +655,24 @@
             <h1>New Shipment Booking</h1>
             <p class="ts-muted">Create a shipment using your saved customers and courier services.</p>
           </div>
-        </header>
+       </header>
 
-        <section class="ts-panel">
-          <form id="bookingForm">
-            <h2>Customer & Courier</h2>
+<section class="ts-panel" style="margin-top:20px">
+  <h2>Create New Invoice</h2>
 
+  <label>Select Customer</label>
+  <select id="invoiceCustomer">
+    <option value="">Select a customer</option>
+    ${customers.map(customer => `
+      <option value="${safe(customer.id)}">
+        ${safe(customer.name)} - ${safe(customer.phone || '')}
+      </option>
+    `).join('')}
+  </select>
+</section>
+
+<section class="ts-panel">
+  <h2>Invoice Summary</h2>
             <div class="form-fields">
               <div class="field">
                 <label>Select Customer *</label>
