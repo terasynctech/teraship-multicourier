@@ -1116,7 +1116,129 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
          }
     });
   }
+  async function loadBillingPage() {
+    const host = $('#pageContent');
+    if (!host) return;
 
+    host.innerHTML = `
+      <main class="ts-dashboard">
+        <header class="ts-head">
+          <div>
+            <h1>Billing & COD Management</h1>
+            <p class="ts-muted">Manage invoices, payments and cash on delivery.</p>
+          </div>
+        </header>
+
+        <section class="ts-panel">
+          <h2>Invoice Summary</h2>
+          <div id="invoiceSummary">Loading invoices...</div>
+        </section>
+
+        <section class="ts-panel" style="margin-top:20px">
+          <h2>Invoices</h2>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Invoice Number</th>
+                  <th>Date</th>
+                  <th>Customer</th>
+                  <th>Total Amount</th>
+                  <th>Payment Status</th>
+                </tr>
+              </thead>
+              <tbody id="invoiceRows">
+                <tr><td colspan="5">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ts-panel" style="margin-top:20px">
+          <h2>COD Management</h2>
+          <div style="overflow-x:auto">
+            <table>
+              <thead>
+                <tr>
+                  <th>Shipment ID</th>
+                  <th>COD Amount</th>
+                  <th>Collected</th>
+                  <th>Pending</th>
+                  <th>Settlement Status</th>
+                </tr>
+              </thead>
+              <tbody id="codRows">
+                <tr><td colspan="5">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    `;
+
+    try {
+      const [invoiceResult, codResult] = await Promise.all([
+        db.from('invoices')
+          .select('*')
+          .order('created_at', { ascending: false }),
+
+        db.from('cod_records')
+          .select('*')
+          .order('created_at', { ascending: false })
+      ]);
+
+      if (invoiceResult.error) throw invoiceResult.error;
+      if (codResult.error) throw codResult.error;
+
+      const invoices = invoiceResult.data || [];
+      const codRecords = codResult.data || [];
+
+      const totalInvoices = invoices.reduce(
+        (sum, invoice) => sum + Number(invoice.total_amount || 0), 0
+      );
+
+      const paidInvoices = invoices.filter(
+        invoice => invoice.payment_status === 'paid'
+      ).length;
+
+      $('#invoiceSummary').innerHTML = `
+        <p><strong>Total Invoices:</strong> ${invoices.length}</p>
+        <p><strong>Total Billing:</strong> ${money(totalInvoices)}</p>
+        <p><strong>Paid Invoices:</strong> ${paidInvoices}</p>
+        <p><strong>Pending Invoices:</strong> ${invoices.length - paidInvoices}</p>
+      `;
+
+      $('#invoiceRows').innerHTML = invoices.length
+        ? invoices.map(invoice => `
+            <tr>
+              <td>${safe(invoice.invoice_number)}</td>
+              <td>${safe(shortDate(invoice.invoice_date))}</td>
+              <td>${safe(customers.find(c => c.id === invoice.customer_id)?.name || '—')}</td>
+              <td>${money(invoice.total_amount)}</td>
+              <td>${safe(invoice.payment_status || 'unpaid')}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="5">No invoices found.</td></tr>';
+
+      $('#codRows').innerHTML = codRecords.length
+        ? codRecords.map(record => `
+            <tr>
+              <td>${safe(record.shipment_id || '—')}</td>
+              <td>${money(record.cod_amount)}</td>
+              <td>${money(record.collected_amount)}</td>
+              <td>${money(Math.max(0, Number(record.cod_amount || 0) - Number(record.collected_amount || 0)))}</td>
+              <td>${safe(record.settlement_status || 'pending')}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="5">No COD records found.</td></tr>';
+
+    } catch (error) {
+      host.insertAdjacentHTML(
+        'beforeend',
+        `<section class="ts-panel"><p>Billing error: ${safe(error.message)}</p></section>`
+      );
+    }
+  }
   async function start() {
     showMessage(
       'Loading TeraShip dashboard',
@@ -1170,6 +1292,8 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
   loadBookingPage();
 } else if (page === 'tracking') {
   loadTrackingPage();
+} else if (page === 'billing') {
+  loadBillingPage();
 } else {
   showMessage(
     pageNames[page],
