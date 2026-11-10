@@ -660,17 +660,11 @@
 <section class="ts-panel" style="margin-top:20px">
   <h2>Create New Invoice</h2>
 
-  <label>Select Customer</label>
-  <select id="invoiceCustomer">
-    <option value="">Select a customer</option>
-    ${billingCustomers.map(customer => `
-      <option value="${safe(customer.id)}">
-        ${safe(customer.name)} - ${safe(customer.phone || '')}
-      </option>
-    `).join('')}
-  </select>
+<label>Select Customer</label>
+<select id="invoiceCustomer">
+  <option value="">Loading customers...</option>
+</select>
 </section>
-
 <section class="ts-panel">
   <h2>Invoice Summary</h2>
             <div class="form-fields">
@@ -1208,6 +1202,17 @@ if (customerResult.error) throw customerResult.error;
       const invoices = invoiceResult.data || [];
       const codRecords = codResult.data || [];
 const billingCustomers = customerResult.data || [];
+       const customerSelect = $('#invoiceCustomer');
+
+if (customerSelect) {
+  customerSelect.innerHTML =
+    '<option value="">Select a customer</option>' +
+    billingCustomers.map(customer => `
+      <option value="${safe(customer.id)}">
+        ${safe(customer.name)} - ${safe(customer.phone || '')}
+      </option>
+    `).join('');
+}
       const totalInvoices = invoices.reduce(
         (sum, invoice) => sum + Number(invoice.total_amount || 0), 0
       );
