@@ -814,9 +814,32 @@ const bookingForm = $('#bookingForm');
           throw new Error('Please select a courier company.');
         }
 
-        const result = await db.from('shipments').insert(payload);
+       const { data: savedShipment, error: shipmentError } = await db
+  .from('shipments')
+  .insert(payload)
+  .select('id')
+  .single();
 
-        if (result.error) throw result.error;
+if (shipmentError) throw shipmentError;
+
+if (paymentMode === 'COD') {
+  const { error: codError } = await db
+    .from('cod_records')
+    .insert({
+      customer_id: customerId,
+      shipment_id: savedShipment.id,
+      cod_amount: codAmount,
+      collected_amount: 0,
+      settlement_status: 'pending',
+      remarks: 'Automatically created from shipment booking'
+    });
+
+  if (codError) {
+    throw new Error(
+      'Shipment saved, but COD record failed: ' + codError.message
+    );
+  }
+}
 
         alert('Demo shipment booking saved successfully. Demo AWB: ' + demoAwb);
 
