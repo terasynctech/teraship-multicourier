@@ -659,7 +659,8 @@ if (customerCancel) customerCancel.addEventListener('click', clearCustomerForm);
 
 
 <section class="ts-panel">
-  <h2>Shipment List</h2>
+  <form id="bookingForm">
+    <h2>Shipment Details</h2>
     <div class="form-fields">
               <div class="field">
                 <label>Select Customer *</label>
@@ -755,7 +756,7 @@ if (customerCancel) customerCancel.addEventListener('click', clearCustomerForm);
         </section>
       </main>
     `;
-
+const bookingForm = $('#bookingForm');
    if (bookingForm) bookingForm.addEventListener('submit', async event => {
   event.preventDefault();
 
