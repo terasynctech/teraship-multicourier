@@ -492,7 +492,8 @@
 
     drawRows();
 
-    $('#customerSearch').addEventListener('input', event => {
+    const customerSearch = $('#customerSearch');
+if (customerSearch) customerSearch.addEventListener('input', event => {
       drawRows(event.target.value);
     });
 
@@ -503,7 +504,8 @@
       $('#customerSave').textContent = 'Save Customer';
     }
 
-    $('#customerCancel').addEventListener('click', clearCustomerForm);
+    const customerCancel = $('#customerCancel');
+if (customerCancel) customerCancel.addEventListener('click', clearCustomerForm);
 
     $('#customerForm').addEventListener('submit', async event => {
       event.preventDefault();
