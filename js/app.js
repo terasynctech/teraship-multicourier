@@ -1254,6 +1254,7 @@ if (customerSelect) {
 
       if (invoiceForm) {
         invoiceForm.addEventListener('submit', async event => {
+           alert('Invoice button is connected!');
           event.preventDefault();
 
           const message = $('#invoiceMessage');
