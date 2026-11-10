@@ -1250,6 +1250,56 @@ if (customerSelect) {
       </option>
     `).join('');
 }
+             const invoiceForm = $('#invoiceForm');
+
+      if (invoiceForm) {
+        invoiceForm.addEventListener('submit', async event => {
+          event.preventDefault();
+
+          const message = $('#invoiceMessage');
+          const saveButton = invoiceForm.querySelector('button[type="submit"]');
+
+          saveButton.disabled = true;
+          message.textContent = 'Saving invoice...';
+
+          try {
+            if (!currentProfile?.organization_id) {
+              throw new Error('Organization ID is missing from your profile.');
+            }
+
+            const subtotal = Number($('#invoiceSubtotal').value || 0);
+            const tax = Number($('#invoiceTax').value || 0);
+
+            if (subtotal <= 0) {
+              throw new Error('Please enter a valid subtotal.');
+            }
+
+            const payload = {
+              organization_id: currentProfile.organization_id,
+              customer_id: $('#invoiceCustomer').value,
+              invoice_number: 'TS-INV-' + Date.now(),
+              invoice_date: $('#invoiceDate').value,
+              subtotal: subtotal,
+              tax_amount: tax,
+              total_amount: subtotal + tax,
+              payment_status: $('#invoicePaymentStatus').value
+            };
+
+            const { error } = await db
+              .from('invoices')
+              .insert(payload);
+
+            if (error) throw error;
+
+            alert('Invoice saved successfully!');
+            await loadBillingPage();
+
+          } catch (error) {
+            message.textContent = 'Error: ' + error.message;
+            saveButton.disabled = false;
+          }
+        });
+      }
       const totalInvoices = invoices.reduce(
         (sum, invoice) => sum + Number(invoice.total_amount || 0), 0
       );
