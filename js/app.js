@@ -1140,11 +1140,7 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
           <h2>Invoice Summary</h2>
           <div id="invoiceSummary">Loading invoices...</div>
         </section>
-        <section class="ts-panel">
-          <h2>Invoice Summary</h2>
-          <div id="invoiceSummary">Loading invoices...</div>
-        </section>
-
+        
         <section class="ts-panel" style="margin-top:20px">
           <h2>Invoices</h2>
           <div style="overflow-x:auto">
