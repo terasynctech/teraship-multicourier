@@ -1130,12 +1130,47 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
         </header>
         
         <section class="ts-panel" style="margin-top:20px">
-          <h2>Create New Invoice</h2>
-          <label>Select Customer</label>
-          <select id="invoiceCustomer">
-            <option value="">Loading customers...</option>
-          </select>
-        </section>
+  <h2>Create New Invoice</h2>
+
+  <form id="invoiceForm">
+    <div class="form-fields">
+
+      <div class="field">
+        <label>Select Customer</label>
+        <select id="invoiceCustomer" required>
+          <option value="">Select a customer</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Invoice Date</label>
+        <input type="date" id="invoiceDate" required>
+      </div>
+
+      <div class="field">
+        <label>Subtotal (₹)</label>
+        <input type="number" id="invoiceSubtotal" min="0" step="0.01" required>
+      </div>
+
+      <div class="field">
+        <label>GST Amount (₹)</label>
+        <input type="number" id="invoiceTax" min="0" step="0.01" value="0">
+      </div>
+
+      <div class="field">
+        <label>Payment Status</label>
+        <select id="invoicePaymentStatus">
+          <option value="unpaid">Pending</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+
+    </div>
+
+    <button type="submit" class="ts-btn">Save Invoice</button>
+    <p id="invoiceMessage"></p>
+  </form>
+</section>
 
         <section class="ts-panel">
           <h2>Invoice Summary</h2>
