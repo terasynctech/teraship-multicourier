@@ -2,7 +2,7 @@
    Uses the existing Supabase client and authenticated session.
    Courier rates, AWBs, labels and tracking are illustrative until real
    courier APIs/contracts are connected. Never use a service-role key here. */
-(() =>
+(() => {
   const $ = (selector, root = document) => root.querySelector(selector);
   const money = value => new Intl.NumberFormat('en-IN', {
     style: 'currency', currency: 'INR', maximumFractionDigits: 0
