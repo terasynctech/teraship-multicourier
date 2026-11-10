@@ -1127,8 +1127,7 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
             <p class="ts-muted">Manage invoices, payments and cash on delivery.</p>
           </div>
         </header>
-        </header>
-
+        
         <section class="ts-panel" style="margin-top:20px">
           <h2>Create New Invoice</h2>
           <label>Select Customer</label>
