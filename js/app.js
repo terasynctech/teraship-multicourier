@@ -2,9 +2,7 @@
    Uses the existing Supabase client and authenticated session.
    Courier rates, AWBs, labels and tracking are illustrative until real
    courier APIs/contracts are connected. Never use a service-role key here. */
-(() => {
-  'use strict';
-
+(() =>
   const $ = (selector, root = document) => root.querySelector(selector);
   const money = value => new Intl.NumberFormat('en-IN', {
     style: 'currency', currency: 'INR', maximumFractionDigits: 0
@@ -661,8 +659,9 @@ if (customerCancel) customerCancel.addEventListener('click', clearCustomerForm);
 
 
 <section class="ts-panel">
-  <h2>Invoice Summary</h2>
-            <div class="form-fields">
+  <form id="bookingForm">
+    <h2>Shipment Details</h2>
+    <div class="form-fields">
               <div class="field">
                 <label>Select Customer *</label>
                 <select id="bookCustomer" required>
