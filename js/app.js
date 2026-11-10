@@ -877,7 +877,8 @@ if (customerCancel) customerCancel.addEventListener('click', clearCustomerForm);
         </header>
 
         <section class="ts-panel">
-          <h2>Shipment List</h2>
+        <form id="bookingForm">
+          <h2>Shipment Details</h2>
 
           <div style="overflow-x:auto">
             <table style="width:100%;border-collapse:collapse">
