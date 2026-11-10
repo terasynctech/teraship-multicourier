@@ -657,14 +657,7 @@
           </div>
        </header>
 
-<section class="ts-panel" style="margin-top:20px">
-  <h2>Create New Invoice</h2>
 
-<label>Select Customer</label>
-<select id="invoiceCustomer">
-  <option value="">Loading customers...</option>
-</select>
-</section>
 <section class="ts-panel">
   <h2>Invoice Summary</h2>
             <div class="form-fields">
@@ -1134,7 +1127,20 @@ $('#adminTrackingForm').addEventListener('submit', saveTrackingUpdate);
             <p class="ts-muted">Manage invoices, payments and cash on delivery.</p>
           </div>
         </header>
+        </header>
 
+        <section class="ts-panel" style="margin-top:20px">
+          <h2>Create New Invoice</h2>
+          <label>Select Customer</label>
+          <select id="invoiceCustomer">
+            <option value="">Loading customers...</option>
+          </select>
+        </section>
+
+        <section class="ts-panel">
+          <h2>Invoice Summary</h2>
+          <div id="invoiceSummary">Loading invoices...</div>
+        </section>
         <section class="ts-panel">
           <h2>Invoice Summary</h2>
           <div id="invoiceSummary">Loading invoices...</div>
