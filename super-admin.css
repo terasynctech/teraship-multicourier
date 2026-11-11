@@ -1,0 +1,166 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f1f5f9;
+  color: #172554;
+}
+
+.super-auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #101b35, #243d70);
+}
+
+.super-login-card {
+  width: 100%;
+  max-width: 430px;
+  padding: 38px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 60px #0004;
+}
+
+.super-logo {
+  width: 55px;
+  height: 55px;
+  display: grid;
+  place-items: center;
+  background: #142b55;
+  color: white;
+  border-radius: 14px;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.super-eyebrow {
+  margin-top: 25px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.super-login-card h1 {
+  font-size: 27px;
+  margin-bottom: 8px;
+}
+
+.super-login-card p {
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.super-login-card label {
+  display: block;
+  margin-top: 20px;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.super-login-card input {
+  width: 100%;
+  padding: 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 15px;
+}
+
+.super-login-card button {
+  width: 100%;
+  margin-top: 25px;
+  padding: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #17366c;
+  color: white;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.super-login-card button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+#superAdminMessage {
+  min-height: 20px;
+  font-size: 13px;
+}
+
+.super-app {
+  min-height: 100vh;
+}
+
+.super-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 5%;
+  background: #101b35;
+  color: white;
+}
+
+.super-header strong {
+  font-size: 22px;
+}
+
+.super-header span {
+  margin-left: 12px;
+  color: #93c5fd;
+}
+
+.super-header button {
+  padding: 10px 18px;
+  border: 1px solid #64748b;
+  border-radius: 7px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+}
+
+.super-welcome {
+  margin: 35px auto;
+  padding: 30px;
+  max-width: 1100px;
+}
+
+.super-welcome p {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.super-welcome h1 {
+  font-size: 30px;
+}
+
+#superAdminContent {
+  max-width: 1100px;
+  margin: auto;
+  padding: 0 30px 40px;
+}
+
+@media (max-width: 600px) {
+  .super-login-card {
+    padding: 25px;
+  }
+
+  .super-welcome h1 {
+    font-size: 23px;
+  }
+
+  .super-header {
+    padding: 16px;
+  }
+}
