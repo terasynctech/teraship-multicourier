@@ -1,0 +1,209 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TeraShip Seller Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      color: #172033;
+    }
+    header {
+      background: #101d38;
+      color: white;
+      padding: 18px 5%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand { font-size: 23px; font-weight: bold; }
+    .brand span { color: #38bdf8; }
+    button {
+      border: 0;
+      border-radius: 7px;
+      padding: 11px 17px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .logout { background: #ef4444; color: white; }
+    main { max-width: 1150px; margin: 30px auto; padding: 0 18px; }
+    .welcome {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 22px;
+      box-shadow: 0 3px 15px #0000000a;
+    }
+    h1 { margin: 0 0 8px; font-size: 25px; }
+    .muted { color: #64748b; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: white;
+      padding: 22px;
+      border-radius: 12px;
+      box-shadow: 0 3px 15px #0000000a;
+    }
+    .card h3 { margin: 0 0 12px; font-size: 16px; }
+    .number { font-size: 27px; font-weight: bold; color: #2563eb; }
+    .section { margin-top: 24px; }
+    .profile p { margin: 10px 0; }
+    .status {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .notice {
+      background: #eff6ff;
+      border-left: 4px solid #2563eb;
+      padding: 16px;
+      border-radius: 7px;
+      line-height: 1.6;
+    }
+    #message { color: #dc2626; padding: 20px; }
+    @media(max-width:600px) {
+      header { padding: 15px; }
+      .brand { font-size: 19px; }
+      main { margin-top: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Tera<span>Ship</span></div>
+  <button class="logout" id="logoutBtn">Logout</button>
+</header>
+
+<main>
+  <div id="message">Checking your account...</div>
+
+  <div id="dashboard" style="display:none">
+    <section class="welcome">
+      <h1>Welcome, <span id="sellerName">Seller</span></h1>
+      <p class="muted">Manage your shipping business from one place.</p>
+      <span class="status">Account Approved</span>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h3>Total Shipments</h3>
+        <div class="number">0</div>
+        <p class="muted">Your shipment activity</p>
+      </div>
+      <div class="card">
+        <h3>In Transit</h3>
+        <div class="number">0</div>
+        <p class="muted">Currently moving</p>
+      </div>
+      <div class="card">
+        <h3>Delivered</h3>
+        <div class="number">0</div>
+        <p class="muted">Successfully delivered</p>
+      </div>
+      <div class="card">
+        <h3>Courier Partners</h3>
+        <div class="number">Coming Soon</div>
+        <p class="muted">Platform-wide courier options</p>
+      </div>
+    </section>
+
+    <section class="section card profile">
+      <h3>Business Profile</h3>
+      <p><strong>Business:</strong> <span id="businessName">-</span></p>
+      <p><strong>Contact Person:</strong> <span id="contactName">-</span></p>
+      <p><strong>Email:</strong> <span id="sellerEmail">-</span></p>
+      <p><strong>Phone:</strong> <span id="sellerPhone">-</span></p>
+      <p><strong>Location:</strong> <span id="sellerLocation">-</span></p>
+    </section>
+
+    <section class="section">
+      <div class="notice">
+        <strong>Shipping services are being prepared.</strong><br>
+        Shipment booking, courier selection, live tracking, COD and billing
+        will be activated after the secure seller shipping system is connected.
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+
+<script>
+(async function () {
+  const db = window.supabaseClient;
+  const message = document.getElementById("message");
+
+  if (!db) {
+    message.textContent = "Connection error. Please contact support.";
+    return;
+  }
+
+  const { data: authData, error: authError } = await db.auth.getUser();
+
+  if (authError || !authData.user) {
+    window.location.href = "seller-login.html";
+    return;
+  }
+
+  const user = authData.user;
+
+  if (!user.email_confirmed_at) {
+    await db.auth.signOut();
+    window.location.href = "seller-login.html";
+    return;
+  }
+
+  const { data: seller, error } = await db
+    .from("sellers")
+    .select("id, business_name, contact_person, email, phone, city, state, status")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error || !seller) {
+    message.textContent = "Could not load your seller profile. Please contact support.";
+    return;
+  }
+
+  if (seller.status !== "approved") {
+    await db.auth.signOut();
+    window.location.href = "seller-login.html";
+    return;
+  }
+
+  document.getElementById("sellerName").textContent = seller.contact_person || "Seller";
+  document.getElementById("businessName").textContent = seller.business_name || "-";
+  document.getElementById("contactName").textContent = seller.contact_person || "-";
+  document.getElementById("sellerEmail").textContent = seller.email || user.email || "-";
+  document.getElementById("sellerPhone").textContent = seller.phone || "-";
+  document.getElementById("sellerLocation").textContent =
+    [seller.city, seller.state].filter(Boolean).join(", ") || "Not provided";
+
+  message.style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
+})();
+
+document.getElementById("logoutBtn").addEventListener("click", async function () {
+  if (window.supabaseClient) {
+    await window.supabaseClient.auth.signOut();
+  }
+  window.location.href = "seller-login.html";
+});
+</script>
+
+</body>
+</html>
