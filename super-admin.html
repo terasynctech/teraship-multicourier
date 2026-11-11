@@ -1,0 +1,64 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101b35">
+  <title>TeraShip | Super Admin</title>
+
+  <link rel="stylesheet" href="css/super-admin.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+</head>
+<body>
+
+  <section class="super-auth" id="superAdminAuthScreen">
+    <form class="super-login-card" id="superAdminLoginForm">
+      <div class="super-logo">TS</div>
+      <p class="super-eyebrow">TERASYNC TECH · TERASHIP</p>
+      <h1>Platform Control Center</h1>
+      <p>Authorized Super Admin access only.</p>
+
+      <label for="superAdminEmail">Email address</label>
+      <input id="superAdminEmail" type="email"
+        autocomplete="username" required
+        placeholder="Administrator email">
+
+      <label for="superAdminPassword">Password</label>
+      <input id="superAdminPassword" type="password"
+        autocomplete="current-password" required
+        placeholder="Your password">
+
+      <button type="submit" id="superAdminLoginButton">
+        Sign in as Super Admin
+      </button>
+
+      <p id="superAdminMessage" role="status"></p>
+    </form>
+  </section>
+
+  <main id="superAdminApp" class="super-app" hidden>
+    <header class="super-header">
+      <div>
+        <strong>TeraShip</strong>
+        <span>Super Admin</span>
+      </div>
+      <button id="superAdminSignOut" type="button">Sign out</button>
+    </header>
+
+    <section class="super-welcome">
+      <p>PLATFORM MANAGEMENT</p>
+      <h1>Welcome to TeraShip Control Center</h1>
+      <div id="superAdminUser"></div>
+    </section>
+
+    <section id="superAdminContent">
+      <p>Loading platform dashboard...</p>
+    </section>
+  </main>
+
+  <script src="js/super-admin.js"></script>
+</body>
+</html>
