@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeraShip | Seller Registration</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f1f5f9;
+  color:#172033;
+}
+.header{
+  background:#101d36;
+  color:white;
+  padding:20px 7%;
+  font-size:23px;
+  font-weight:bold;
+}
+.header span{color:#39b8ef}
+.container{
+  max-width:760px;
+  margin:35px auto;
+  padding:0 16px;
+}
+.card{
+  background:white;
+  padding:30px;
+  border-radius:14px;
+  box-shadow:0 8px 30px rgba(0,0,0,.07);
+}
+h1{margin:0 0 8px;font-size:27px}
+.sub{color:#64748b;margin-bottom:25px;line-height:1.5}
+.section{
+  font-weight:bold;
+  margin:25px 0 15px;
+  color:#263d62;
+  border-bottom:1px solid #e5eaf1;
+  padding-bottom:9px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+}
+.field{margin-bottom:15px}
+label{
+  display:block;
+  font-size:13px;
+  font-weight:bold;
+  margin-bottom:7px;
+}
+input{
+  width:100%;
+  padding:12px;
+  border:1px solid #cbd5e1;
+  border-radius:7px;
+  font-size:14px;
+}
+input:focus{
+  outline:none;
+  border-color:#168bd0;
+}
+button{
+  width:100%;
+  border:0;
+  padding:14px;
+  border-radius:8px;
+  background:#087fc1;
+  color:white;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+  margin-top:12px;
+}
+button:disabled{opacity:.6;cursor:not-allowed}
+.message{
+  display:none;
+  padding:13px;
+  border-radius:7px;
+  margin:15px 0;
+  line-height:1.5;
+  font-size:14px;
+}
+.success{display:block;background:#dcfce7;color:#166534}
+.error{display:block;background:#fee2e2;color:#991b1b}
+.note{
+  margin-top:20px;
+  padding:13px;
+  background:#eff6ff;
+  color:#1e40af;
+  border-radius:7px;
+  font-size:13px;
+  line-height:1.5;
+}
+.footer{text-align:center;color:#64748b;font-size:13px;margin:20px}
+@media(max-width:600px){
+  .grid{grid-template-columns:1fr}
+  .card{padding:21px}
+  h1{font-size:23px}
+}
+</style>
+</head>
+
+<body>
+<div class="header">Tera<span>Ship</span></div>
+
+<div class="container">
+<div class="card">
+
+<h1>Seller Registration</h1>
+<p class="sub">
+Create your TeraShip seller account and manage your shipping business
+from one platform.
+</p>
+
+<form id="sellerForm">
+
+<div class="section">Business Information</div>
+
+<div class="field">
+<label>Business Name *</label>
+<input id="business_name" required maxlength="150"
+placeholder="Enter your business name">
+</div>
+
+<div class="field">
+<label>Contact Person Name *</label>
+<input id="full_name" required maxlength="120"
+placeholder="Enter contact person's name">
+</div>
+
+<div class="grid">
+<div class="field">
+<label>Email Address *</label>
+<input id="email" type="email" required
+placeholder="you@example.com">
+</div>
+
+<div class="field">
+<label>Mobile Number *</label>
+<input id="phone" type="tel" required maxlength="20"
+placeholder="Enter mobile number">
+</div>
+</div>
+
+<div class="div"></div>
+<div class="section">Pickup Address (Optional)</div>
+
+<div class="field">
+<label>Pickup Address</label>
+<input id="pickup_address" placeholder="Street / Building / Area">
+</div>
+
+<div class="grid">
+<div class="field">
+<label>City</label>
+<input id="city" placeholder="City">
+</div>
+<div class="field">
+<label>State</label>
+<input id="state" placeholder="State">
+</div>
+<div class="field">
+<label>PIN Code</label>
+<input id="pincode" maxlength="10" placeholder="PIN Code">
+</div>
+<div class="field">
+<label>GST Number</label>
+<input id="gst_number" maxlength="20" placeholder="GSTIN (if available)">
+</div>
+</div>
+
+<div class="section">Account Security</div>
+
+<div class="grid">
+<div class="field">
+<label>Password *</label>
+<input id="password" type="password" required minlength="8"
+autocomplete="new-password" placeholder="Minimum 8 characters">
+</div>
+<div class="field">
+<label>Confirm Password *</label>
+<input id="confirm_password" type="password" required minlength="8"
+autocomplete="new-password" placeholder="Confirm password">
+</div>
+</div>
+
+<div id="sellerMessage" class="message" role="status"></div>
+
+<button type="submit" id="registerButton">Create Seller Account</button>
+
+</form>
+
+<div class="note">
+<strong>Important:</strong> Every new seller account requires approval
+from TeraShip Super Admin before shipment booking is enabled.
+</div>
+
+</div>
+
+<div class="footer">© 2026 TeraShip | Powered by TeraSyncTech</div>
+</div>
+
+<script>
+(() => {
+  const db = window.supabaseClient;
+  const form = document.getElementById("sellerForm");
+  const message = document.getElementById("sellerMessage");
+  const button = document.getElementById("registerButton");
+
+  function showMessage(text, type) {
+    message.textContent = text;
+    message.className = "message " + type;
+  }
+
+  if (!db) {
+    showMessage(
+      "Connection could not be initialized. Please check js/supabase-config.js.",
+      "error"
+    );
+    button.disabled = true;
+    return;
+  }
+
+  form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const business_name = document.getElementById("business_name").value.trim();
+    const full_name = document.getElementById("full_name").value.trim();
+    const email = document.getElementById("email").value.trim().toLowerCase();
+    const phone = document.getElementById("phone").value.trim();
+    const password = document.getElementById("password").value;
+    const confirm_password = document.getElementById("confirm_password").value;
+
+    if (password.length < 8) {
+      showMessage("Password must contain at least 8 characters.", "error");
+      return;
+    }
+
+    if (password !== confirm_password) {
+      showMessage("Passwords do not match.", "error");
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Creating Account...";
+    message.className = "message";
+    message.textContent = "";
+
+    try {
+      const { data, error } = await db.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            account_type: "seller",
+            business_name,
+            full_name,
+            phone,
+            pickup_address: document.getElementById("pickup_address").value.trim(),
+            city: document.getElementById("city").value.trim(),
+            state: document.getElementById("state").value.trim(),
+            pincode: document.getElementById("pincode").value.trim(),
+            gst_number: document.getElementById("gst_number").value.trim()
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      form.reset();
+
+      if (data.session) {
+        showMessage(
+          "Registration successful! Your seller account is pending Super Admin approval. You cannot book shipments until approved.",
+          "success"
+        );
+      } else {
+        showMessage(
+          "Registration submitted successfully! Please check your email for the verification link. After verification, your account will remain pending Super Admin approval.",
+          "success"
+        );
+      }
+
+    } catch (error) {
+      showMessage(
+        error.message || "Registration failed. Please try again.",
+        "error"
+      );
+    } finally {
+      button.disabled = false;
+      button.textContent = "Create Seller Account";
+    }
+  });
+})();
+</script>
+</body>
+</html>
