@@ -4,8 +4,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101b35">
-  <title>TeraShip | Super Admin</title>
+  <meta name="theme-color" content="#102b50">
+  <title>TeraShip | Control Center</title>
 
   <link rel="stylesheet" href="css/super-admin.css">
 
@@ -14,12 +14,15 @@
 </head>
 <body>
 
+  <!-- SUPER ADMIN LOGIN -->
   <section class="super-auth" id="superAdminAuthScreen">
     <form class="super-login-card" id="superAdminLoginForm">
+
       <div class="super-logo">TS</div>
       <p class="super-eyebrow">TERASYNC TECH · TERASHIP</p>
+
       <h1>Platform Control Center</h1>
-      <p>Authorized Super Admin access only.</p>
+      <p>Manage your complete shipping network.</p>
 
       <label for="superAdminEmail">Email address</label>
       <input id="superAdminEmail" type="email"
@@ -39,26 +42,128 @@
     </form>
   </section>
 
+  <!-- SUPER ADMIN APPLICATION -->
   <main id="superAdminApp" class="super-app" hidden>
-    <header class="super-header">
-      <div>
-        <strong>TeraShip</strong>
-        <span>Super Admin</span>
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="super-sidebar">
+
+      <div class="sidebar-brand">
+        <div class="super-logo">TS</div>
+        <div>
+          <strong>TeraShip</strong>
+          <span>SHIPPING PLATFORM</span>
+        </div>
       </div>
-      <button id="superAdminSignOut" type="button">Sign out</button>
-    </header>
 
-    <section class="super-welcome">
-      <p>PLATFORM MANAGEMENT</p>
-      <h1>Welcome to TeraShip Control Center</h1>
-      <div id="superAdminUser"></div>
-    </section>
+      <div class="sidebar-section-title">MAIN MENU</div>
 
-    <section id="superAdminContent">
-      <p>Loading platform dashboard...</p>
+      <nav class="super-navigation">
+        <div class="super-nav-item active" data-view="overview">
+          <span>▦</span> Overview
+        </div>
+
+        <div class="super-nav-item" data-view="franchises">
+          <span>▣</span> Franchise Management
+        </div>
+
+        <div class="super-nav-item" data-view="sellers">
+          <span>♙</span> Seller Management
+        </div>
+
+        <div class="super-nav-item" data-view="couriers">
+          <span>⇄</span> Courier Partners
+        </div>
+
+        <div class="sidebar-section-title">OPERATIONS</div>
+
+        <div class="super-nav-item" data-view="shipments">
+          <span>▤</span> All Shipments
+        </div>
+
+        <div class="super-nav-item" data-view="tracking">
+          <span>⌖</span> Live Tracking
+        </div>
+
+        <div class="super-nav-item" data-view="cod">
+          <span>₹</span> COD & Wallet
+        </div>
+
+        <div class="super-nav-item" data-view="billing">
+          <span>▧</span> Billing & Invoices
+        </div>
+
+        <div class="sidebar-section-title">BUSINESS</div>
+
+        <div class="super-nav-item" data-view="subscriptions">
+          <span>◇</span> Subscriptions
+        </div>
+
+        <div class="super-nav-item" data-view="reports">
+          <span>▥</span> Reports & Analytics
+        </div>
+
+        <div class="super-nav-item" data-view="settings">
+          <span>⚙</span> Settings
+        </div>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="admin-profile">
+          <div class="admin-avatar">SA</div>
+          <div>
+            <strong>Super Admin</strong>
+            <span>Platform Owner</span>
+          </div>
+        </div>
+
+        <button id="superAdminSignOut" type="button">
+          ↪ Sign Out
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <section class="super-main">
+
+      <header class="super-topbar">
+        <div>
+          <span class="topbar-label">TERASHIP CONTROL CENTER</span>
+          <h2 id="superPageTitle">Overview</h2>
+        </div>
+
+        <div class="topbar-user">
+          <div class="online-indicator"></div>
+          <div id="superAdminUser">Super Admin</div>
+        </div>
+      </header>
+
+      <div class="super-page-content">
+
+        <div class="super-welcome">
+          <div>
+            <p>PLATFORM MANAGEMENT</p>
+            <h1>Welcome to TeraShip</h1>
+            <span>Manage your shipping business from one place.</span>
+          </div>
+          <div class="welcome-icon">🚚</div>
+        </div>
+
+        <section id="superAdminContent">
+          <p>Loading platform dashboard...</p>
+        </section>
+
+      </div>
+
+      <footer class="super-footer">
+        TeraShip by TeraSyncTech · Business Simplified
+      </footer>
+
     </section>
   </main>
 
   <script src="js/super-admin.js"></script>
+
 </body>
 </html>
