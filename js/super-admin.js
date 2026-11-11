@@ -8,6 +8,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const button = document.getElementById("superAdminLoginButton");
   const message = document.getElementById("superAdminMessage");
   const signOut = document.getElementById("superAdminSignOut");
+  const content = document.getElementById("superAdminContent");
+
+  let franchises = [];
+  let editingId = null;
+  let slugTouched = false;
 
   function showMessage(text, isError = true) {
     message.textContent = text;
@@ -17,6 +22,257 @@ document.addEventListener("DOMContentLoaded", () => {
   function showLogin() {
     authScreen.hidden = false;
     app.hidden = true;
+  }
+
+  function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[char]);
+  }
+
+  function makeSlug(value) {
+    return String(value || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  async function loadFranchises() {
+    content.innerHTML = "<p>Loading franchises...</p>";
+
+    const { data, error } = await db
+      .from("organizations")
+      .select("id, name, slug, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      content.innerHTML =
+        `<p style="color:#dc2626">Could not load franchises: ${escapeHTML(error.message)}</p>`;
+      return;
+    }
+
+    franchises = data || [];
+    renderFranchises();
+  }
+
+  function renderFranchises() {
+    content.innerHTML = `
+      <div style="background:white;padding:24px;border-radius:12px;margin-bottom:20px">
+        <h2 style="margin-top:0">Franchise Management</h2>
+        <p>Register and manage courier franchise businesses.</p>
+
+        <form id="franchiseForm">
+          <input type="hidden" id="franchiseId">
+
+          <label for="franchiseName">Franchise / Business Name</label>
+          <input id="franchiseName" type="text" required
+            placeholder="Example: Ranchi Courier Services"
+            style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:7px 0 15px">
+
+          <label for="franchiseSlug">Unique Franchise Slug</label>
+          <input id="franchiseSlug" type="text" required
+            placeholder="ranchi-courier-services"
+            style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:7px 0 15px">
+
+          <button type="submit" id="franchiseSaveButton"
+            style="background:#173b78;color:white;padding:12px 22px;border:0;border-radius:7px;cursor:pointer">
+            Add Franchise
+          </button>
+
+          <button type="button" id="franchiseCancelButton"
+            style="display:none;padding:12px 18px;margin-left:8px">
+            Cancel Edit
+          </button>
+
+          <p id="franchiseMessage" role="status"></p>
+        </form>
+      </div>
+
+      <div style="background:white;padding:24px;border-radius:12px">
+        <h2 style="margin-top:0">Registered Franchises (${franchises.length})</h2>
+
+        <input id="franchiseSearch" type="search"
+          placeholder="Search franchise name or slug..."
+          style="display:block;width:100%;box-sizing:border-box;padding:12px;margin-bottom:18px">
+
+        <div id="franchiseList"></div>
+      </div>
+    `;
+
+    const franchiseForm = document.getElementById("franchiseForm");
+    const nameInput = document.getElementById("franchiseName");
+    const slugInput = document.getElementById("franchiseSlug");
+    const saveButton = document.getElementById("franchiseSaveButton");
+    const cancelButton = document.getElementById("franchiseCancelButton");
+    const searchInput = document.getElementById("franchiseSearch");
+
+    nameInput.addEventListener("input", () => {
+      if (!slugTouched) {
+        slugInput.value = makeSlug(nameInput.value);
+      }
+    });
+
+    slugInput.addEventListener("input", () => {
+      slugTouched = true;
+    });
+
+    searchInput.addEventListener("input", renderFranchiseList);
+
+    cancelButton.addEventListener("click", resetFranchiseForm);
+
+    franchiseForm.addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const name = nameInput.value.trim();
+      const slug = makeSlug(slugInput.value);
+      const franchiseMessage = document.getElementById("franchiseMessage");
+
+      if (!name || !slug) {
+        franchiseMessage.textContent = "Please enter the franchise name and slug.";
+        return;
+      }
+
+      saveButton.disabled = true;
+      saveButton.textContent = "Saving...";
+      franchiseMessage.textContent = "";
+
+      try {
+        let result;
+
+        if (editingId) {
+          result = await db
+            .from("organizations")
+            .update({ name, slug })
+            .eq("id", editingId);
+        } else {
+          result = await db
+            .from("organizations")
+            .insert({ name, slug });
+        }
+
+        if (result.error) throw result.error;
+
+        franchiseMessage.textContent = editingId
+          ? "Franchise updated successfully."
+          : "New franchise created successfully.";
+
+        franchiseMessage.style.color = "#15803d";
+
+        resetFranchiseForm();
+        await loadFranchises();
+
+      } catch (error) {
+        franchiseMessage.textContent =
+          error.message || "Could not save franchise.";
+        franchiseMessage.style.color = "#dc2626";
+      } finally {
+        saveButton.disabled = false;
+        saveButton.textContent = editingId ? "Update Franchise" : "Add Franchise";
+      }
+    });
+
+    renderFranchiseList();
+  }
+
+  function resetFranchiseForm() {
+    editingId = null;
+    slugTouched = false;
+
+    const franchiseForm = document.getElementById("franchiseForm");
+    if (!franchiseForm) return;
+
+    franchiseForm.reset();
+
+    document.getElementById("franchiseId").value = "";
+    document.getElementById("franchiseSaveButton").textContent = "Add Franchise";
+    document.getElementById("franchiseCancelButton").style.display = "none";
+  }
+
+  function renderFranchiseList() {
+    const list = document.getElementById("franchiseList");
+    if (!list) return;
+
+    const search = (
+      document.getElementById("franchiseSearch").value || ""
+    ).toLowerCase().trim();
+
+    const filtered = franchises.filter(franchise =>
+      franchise.name.toLowerCase().includes(search) ||
+      franchise.slug.toLowerCase().includes(search)
+    );
+
+    if (!filtered.length) {
+      list.innerHTML = "<p>No franchises found.</p>";
+      return;
+    }
+
+    list.innerHTML = `
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="text-align:left;background:#eef2f8">
+              <th style="padding:12px">Franchise Name</th>
+              <th style="padding:12px">Slug</th>
+              <th style="padding:12px">Created</th>
+              <th style="padding:12px">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(franchise => `
+              <tr style="border-bottom:1px solid #e5e7eb">
+                <td style="padding:12px">${escapeHTML(franchise.name)}</td>
+                <td style="padding:12px">${escapeHTML(franchise.slug)}</td>
+                <td style="padding:12px">
+                  ${franchise.created_at
+                    ? escapeHTML(new Date(franchise.created_at).toLocaleDateString())
+                    : "—"}
+                </td>
+                <td style="padding:12px">
+                  <button type="button"
+                    data-edit-franchise="${escapeHTML(franchise.id)}"
+                    style="padding:8px 14px;cursor:pointer">
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    list.querySelectorAll("[data-edit-franchise]").forEach(editButton => {
+      editButton.addEventListener("click", () => {
+        const franchise = franchises.find(item =>
+          item.id === editButton.dataset.editFranchise
+        );
+
+        if (!franchise) return;
+
+        editingId = franchise.id;
+        slugTouched = true;
+
+        document.getElementById("franchiseName").value = franchise.name;
+        document.getElementById("franchiseSlug").value = franchise.slug;
+        document.getElementById("franchiseSaveButton").textContent =
+          "Update Franchise";
+        document.getElementById("franchiseCancelButton").style.display =
+          "inline-block";
+
+        document.getElementById("franchiseMessage").textContent =
+          "Editing: " + franchise.name;
+
+        document.getElementById("franchiseForm").scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      });
+    });
   }
 
   async function verifySuperAdmin(user) {
@@ -50,14 +306,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("superAdminUser").textContent =
       "Signed in: " + user.email;
 
-    document.getElementById("superAdminContent").innerHTML = `
-      <div style="background:white;padding:25px;border-radius:12px">
-        <h2>Platform Dashboard</h2>
-        <p>Super Admin authentication successful.</p>
-        <p>Your platform administrator account is verified.</p>
-        <p>Next: Franchise, Seller, Courier and Shipment management.</p>
-      </div>
-    `;
+    await loadFranchises();
 
     return true;
   }
