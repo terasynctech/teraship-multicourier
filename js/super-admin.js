@@ -275,6 +275,66 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  async function showOverview() {
+    content.innerHTML = "<p>Loading dashboard...</p>";
+
+    const { data, error } = await db
+      .from("organizations")
+      .select("id");
+
+    if (error) {
+      content.innerHTML =
+        `<p style="color:#dc2626">Dashboard error: ${escapeHTML(error.message)}</p>`;
+      return;
+    }
+
+    franchises = data || [];
+
+    content.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px">
+        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
+          <p style="color:#64748b">Registered Franchises</p>
+          <h1 style="font-size:32px;color:#1764d5">${franchises.length}</h1>
+          <span style="color:#64748b;font-size:12px">Total registered businesses</span>
+        </div>
+
+        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
+          <p style="color:#64748b">Seller Management</p>
+          <h2>Coming Soon</h2>
+          <span style="color:#64748b;font-size:12px">Seller network management</span>
+        </div>
+
+        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
+          <p style="color:#64748b">Courier Partners</p>
+          <h2>Coming Soon</h2>
+          <span style="color:#64748b;font-size:12px">Courier network management</span>
+        </div>
+
+        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
+          <p style="color:#64748b">All Shipments</p>
+          <h2>Coming Soon</h2>
+          <span style="color:#64748b;font-size:12px">Platform-wide shipment overview</span>
+        </div>
+      </div>
+
+      <div style="background:white;padding:24px;border-radius:12px;margin-top:22px">
+        <h2>Welcome to TeraShip Control Center</h2>
+        <p style="color:#64748b">
+          Manage franchises, sellers, courier partners and shipping operations from one platform.
+        </p>
+      </div>
+    `;
+  }
+
+  function showComingSoon(title) {
+    content.innerHTML = `
+      <div style="background:white;padding:30px;border-radius:12px">
+        <h2>${escapeHTML(title)}</h2>
+        <p style="color:#64748b">This module is planned and will be connected to the database in the next development stage.</p>
+      </div>
+    `;
+  }
+
   async function verifySuperAdmin(user) {
     if (!user) {
       showLogin();
@@ -306,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("superAdminUser").textContent =
       "Signed in: " + user.email;
 
-    await loadFranchises();
+        await showOverview();
 
     return true;
   }
@@ -370,6 +430,44 @@ document.addEventListener("DOMContentLoaded", () => {
       await verifySuperAdmin(data.session.user);
     }
   }
+
+  const menuTitles = {
+    overview: "Overview",
+    franchises: "Franchise Management",
+    sellers: "Seller Management",
+    couriers: "Courier Partners",
+    shipments: "All Shipments",
+    tracking: "Live Tracking",
+    cod: "COD & Wallet",
+    billing: "Billing & Invoices",
+    subscriptions: "Subscriptions",
+    reports: "Reports & Analytics",
+    settings: "Settings"
+  };
+
+  document.querySelectorAll(".super-nav-item").forEach(item => {
+    item.addEventListener("click", async () => {
+      const view = item.dataset.view;
+      if (!view) return;
+
+      document.querySelectorAll(".super-nav-item").forEach(nav => {
+        nav.classList.remove("active");
+      });
+
+      item.classList.add("active");
+
+      const title = menuTitles[view] || "TeraShip";
+      document.getElementById("superPageTitle").textContent = title;
+
+      if (view === "overview") {
+        await showOverview();
+      } else if (view === "franchises") {
+        await loadFranchises();
+      } else {
+        showComingSoon(title);
+      }
+    });
+  });
 
   checkSession();
 });
