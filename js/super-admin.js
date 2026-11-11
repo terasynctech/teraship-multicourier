@@ -335,6 +335,150 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+async function loadSellers() {
+  content.innerHTML = "<p>Loading sellers...</p>";
+
+  const { data, error } = await db
+    .from("sellers")
+    .select("id, business_name, contact_person, email, phone, city, state, status, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    content.innerHTML = `
+      <p style="color:#dc2626">
+        Could not load sellers: ${escapeHTML(error.message)}
+      </p>`;
+    return;
+  }
+
+  renderSellers(data || []);
+}
+
+function renderSellers(sellers) {
+  content.innerHTML = `
+    <div style="background:white;padding:24px;border-radius:12px;margin-bottom:20px">
+      <h2 style="margin-top:0">Seller Management</h2>
+      <p>Manage direct TeraShip seller registrations and approvals.</p>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin:20px 0">
+        <div><strong>${sellers.length}</strong><br>Total Sellers</div>
+        <div><strong>${sellers.filter(s => s.status === "pending").length}</strong><br>Pending</div>
+        <div><strong>${sellers.filter(s => s.status === "approved").length}</strong><br>Approved</div>
+        <div><strong>${sellers.filter(s => s.status === "rejected").length}</strong><br>Rejected</div>
+      </div>
+
+      <input id="sellerSearch" type="search"
+        placeholder="Search business, contact, email or phone..."
+        style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:18px">
+
+      <div id="sellerList"></div>
+    </div>
+  `;
+
+  const searchInput = document.getElementById("sellerSearch");
+
+  function displayList() {
+    const search = searchInput.value.toLowerCase().trim();
+
+    const filtered = sellers.filter(s =>
+      [s.business_name, s.contact_person, s.email, s.phone]
+        .some(value => String(value || "").toLowerCase().includes(search))
+    );
+
+    const list = document.getElementById("sellerList");
+
+    if (!filtered.length) {
+      list.innerHTML = "<p>No sellers found.</p>";
+      return;
+    }
+
+    list.innerHTML = `
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:850px">
+          <thead>
+            <tr style="background:#eef2f8;text-align:left">
+              <th style="padding:12px">Business</th>
+              <th style="padding:12px">Contact</th>
+              <th style="padding:12px">Email / Phone</th>
+              <th style="padding:12px">Location</th>
+              <th style="padding:12px">Status</th>
+              <th style="padding:12px">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filtered.map(s => `
+              <tr style="border-bottom:1px solid #e5e7eb">
+                <td style="padding:12px">${escapeHTML(s.business_name)}</td>
+                <td style="padding:12px">${escapeHTML(s.contact_person)}</td>
+                <td style="padding:12px">
+                  ${escapeHTML(s.email)}<br>
+                  ${escapeHTML(s.phone)}
+                </td>
+                <td style="padding:12px">
+                  ${escapeHTML([s.city, s.state].filter(Boolean).join(", ") || "—")}
+                </td>
+                <td style="padding:12px">
+                  <strong>${escapeHTML(s.status)}</strong>
+                </td>
+                <td style="padding:12px;white-space:nowrap">
+                  ${s.status === "pending" ? `
+                    <button data-seller-id="${escapeHTML(s.id)}"
+                      data-seller-status="approved">Approve</button>
+                    <button data-seller-id="${escapeHTML(s.id)}"
+                      data-seller-status="rejected">Reject</button>
+                  ` : s.status === "approved" ? `
+                    <button data-seller-id="${escapeHTML(s.id)}"
+                      data-seller-status="suspended">Suspend</button>
+                  ` : `
+                    <button data-seller-id="${escapeHTML(s.id)}"
+                      data-seller-status="approved">Approve</button>
+                  `}
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    list.querySelectorAll("[data-seller-id]").forEach(actionButton => {
+      actionButton.addEventListener("click", async () => {
+        const sellerId = actionButton.dataset.sellerId;
+        const newStatus = actionButton.dataset.sellerStatus;
+
+        if (!confirm(`Are you sure you want to ${newStatus} this seller?`)) {
+          return;
+        }
+
+        actionButton.disabled = true;
+        actionButton.textContent = "Updating...";
+
+        const { error } = await db
+          .from("sellers")
+          .update({
+            status: newStatus,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sellerId);
+
+        if (error) {
+          alert("Could not update seller: " + error.message);
+          actionButton.disabled = false;
+          actionButton.textContent =
+            newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+          return;
+        }
+
+        alert("Seller status updated successfully.");
+        await loadSellers();
+      });
+    });
+  }
+
+  searchInput.addEventListener("input", displayList);
+  displayList();
+}
+
   async function verifySuperAdmin(user) {
     if (!user) {
       showLogin();
@@ -463,6 +607,8 @@ document.addEventListener("DOMContentLoaded", () => {
         await showOverview();
       } else if (view === "franchises") {
         await loadFranchises();
+      } else if (view === "sellers") {
+        await loadSellers();
       } else {
         showComingSoon(title);
       }
