@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TeraShip Seller Login</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #eef3f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-card {
+      background: white;
+      width: 100%;
+      max-width: 430px;
+      padding: 35px;
+      border-radius: 16px;
+      box-shadow: 0 12px 35px rgba(0,0,0,.09);
+    }
+    .brand {
+      text-align: center;
+      color: #173b78;
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    h2 { text-align: center; margin: 15px 0 8px; }
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 25px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin: 15px 0 7px;
+      font-size: 14px;
+    }
+    input {
+      width: 100%;
+      padding: 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #173b78;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 22px;
+    }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .message {
+      margin-top: 15px;
+      font-size: 14px;
+      line-height: 1.5;
+      text-align: center;
+    }
+    .links {
+      text-align: center;
+      margin-top: 22px;
+      font-size: 14px;
+      line-height: 2;
+    }
+    a { color: #1764d5; text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="brand">TeraShip</div>
+    <h2>Seller Login</h2>
+    <p class="subtitle">Manage your shipping business from one platform.</p>
+
+    <form id="sellerLoginForm">
+      <label for="email">Email Address</label>
+      <input id="email" type="email" required placeholder="Enter registered email">
+
+      <label for="password">Password</label>
+      <input id="password" type="password" required placeholder="Enter password">
+
+      <button type="submit" id="loginButton">Sign In</button>
+    </form>
+
+    <div id="loginMessage" class="message" role="status"></div>
+
+    <div class="links">
+      New seller? <a href="seller-register.html">Create an account</a><br>
+      <a href="index.html">Back to TeraShip</a>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const db = window.supabaseClient;
+      const form = document.getElementById("sellerLoginForm");
+      const button = document.getElementById("loginButton");
+      const message = document.getElementById("loginMessage");
+
+      if (!db) {
+        message.style.color = "#dc2626";
+        message.textContent = "Database connection missing. Please contact support.";
+        button.disabled = true;
+        return;
+      }
+
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        button.disabled = true;
+        button.textContent = "Checking account...";
+        message.textContent = "";
+
+        try {
+          const email = document.getElementById("email").value.trim();
+          const password = document.getElementById("password").value;
+
+          const { data, error } = await db.auth.signInWithPassword({
+            email,
+            password
+          });
+
+          if (error) throw error;
+
+          const user = data.user;
+
+          if (!user.email_confirmed_at) {
+            await db.auth.signOut();
+            throw new Error("Please verify your email before logging in.");
+          }
+
+          const { data: seller, error: sellerError } = await db
+            .from("sellers")
+            .select("id, business_name, contact_person, status")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (sellerError) throw sellerError;
+
+          if (!seller) {
+            await db.auth.signOut();
+            throw new Error("Seller account not found. Please contact support.");
+          }
+
+          if (seller.status !== "approved") {
+            await db.auth.signOut();
+
+            if (seller.status === "pending") {
+              throw new Error("Your email is verified, but your account is awaiting Super Admin approval.");
+            }
+
+            if (seller.status === "rejected") {
+              throw new Error("Your seller application was rejected. Please contact support.");
+            }
+
+            throw new Error("Your seller account is currently suspended.");
+          }
+
+          window.location.href = "seller-dashboard.html";
+
+        } catch (error) {
+          message.style.color = "#dc2626";
+          message.textContent = error.message || "Login failed.";
+        } finally {
+          button.disabled = false;
+          button.textContent = "Sign In";
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
