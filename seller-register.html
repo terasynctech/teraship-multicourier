@@ -256,23 +256,26 @@ from TeraShip Super Admin before shipment booking is enabled.
     message.textContent = "";
 
     try {
-      const { data, error } = await db.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            account_type: "seller",
-            business_name,
-            full_name,
-            phone,
-            pickup_address: document.getElementById("pickup_address").value.trim(),
-            city: document.getElementById("city").value.trim(),
-            state: document.getElementById("state").value.trim(),
-            pincode: document.getElementById("pincode").value.trim(),
-            gst_number: document.getElementById("gst_number").value.trim()
-          }
-        }
-      });
+      
+const { data, error } = await db.auth.signUp({
+  email,
+  password,
+  options: {
+    emailRedirectTo: "https://terasynctech.github.io/teraship-multicourier/seller-login.html",
+    data: {
+      account_type: "seller",
+      business_name,
+      full_name,
+      phone,
+      pickup_address: document.getElementById("pickup_address").value.trim(),
+      city: document.getElementById("city").value.trim(),
+      state: document.getElementById("state").value.trim(),
+      pincode: document.getElementById("pincode").value.trim(),
+      gst_number: document.getElementById("gst_number").value.trim()
+    }
+  }
+});
+
 
       if (error) throw error;
 
