@@ -1,4 +1,3 @@
-
 document.addEventListener("DOMContentLoaded", () => {
   const db = window.supabaseClient;
 
@@ -14,6 +13,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentUser = null;
   let currentView = "overview";
   let sellerShipments = [];
+  let courierRates = [];
+  let platformCouriers = [];
+  let editingRateId = null;
 
   const statuses = [
     "booked",
@@ -98,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const titles = {
       overview: "Overview",
       "seller-shipments": "Seller Shipments",
+      "courier-rates": "Courier Rate Management",
       shipments: "All Shipments",
       tracking: "Live Tracking",
       sellers: "Seller Management",
@@ -117,6 +120,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    if (view === "courier-rates") {
+      await loadCourierRates();
+      return;
+    }
+
     if (view === "overview") {
       content.innerHTML = `
         <div class="super-welcome">
@@ -130,12 +138,17 @@ document.addEventListener("DOMContentLoaded", () => {
         <button type="button" id="openSellerShipments">
           View Seller Shipments
         </button>
+
+        <button type="button" id="openCourierRates">
+          Manage Courier Rates
+        </button>
       `;
 
       document.getElementById("openSellerShipments")
-        .addEventListener("click", () => {
-          showView("seller-shipments");
-        });
+        .addEventListener("click", () => showView("seller-shipments"));
+
+      document.getElementById("openCourierRates")
+        .addEventListener("click", () => showView("courier-rates"));
 
       return;
     }
@@ -147,10 +160,10 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `;
   }
-
+  
   async function loadSellerShipments() {
     content.innerHTML = `
-      <div class="seller-admin-card">
+      <div style="background:white;padding:22px;border-radius:12px">
         <p>Loading seller shipments...</p>
       </div>
     `;
@@ -162,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (error) {
       content.innerHTML = `
-        <div class="seller-admin-card">
+        <div style="background:white;padding:22px;border-radius:12px">
           <h3>Could not load seller shipments</h3>
           <p>${escapeHTML(error.message)}</p>
         </div>
@@ -172,12 +185,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sellerShipments = data || [];
 
-    const sellerIds = [...new Set(
-      sellerShipments.map(item => item.seller_id)
-    )];
-
+    const sellerIds = [...new Set(sellerShipments.map(x => x.seller_id))];
     const courierIds = [...new Set(
-      sellerShipments.map(item => item.courier_id).filter(Boolean)
+      sellerShipments.map(x => x.courier_id).filter(Boolean)
     )];
 
     let sellers = [];
@@ -191,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (result.error) {
         content.innerHTML = `
-          <div class="seller-admin-card">
+          <div style="background:white;padding:22px;border-radius:12px">
             <h3>Could not load seller details</h3>
             <p>${escapeHTML(result.error.message)}</p>
           </div>
@@ -210,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (result.error) {
         content.innerHTML = `
-          <div class="seller-admin-card">
+          <div style="background:white;padding:22px;border-radius:12px">
             <h3>Could not load courier details</h3>
             <p>${escapeHTML(result.error.message)}</p>
           </div>
@@ -221,13 +231,8 @@ document.addEventListener("DOMContentLoaded", () => {
       couriers = result.data || [];
     }
 
-    const sellerMap = Object.fromEntries(
-      sellers.map(seller => [seller.id, seller])
-    );
-
-    const courierMap = Object.fromEntries(
-      couriers.map(courier => [courier.id, courier])
-    );
+    const sellerMap = Object.fromEntries(sellers.map(s => [s.id, s]));
+    const courierMap = Object.fromEntries(couriers.map(c => [c.id, c]));
 
     renderSellerShipments(sellerMap, courierMap);
   }
@@ -239,70 +244,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
       return `
         <tr>
-          <td>
-            <strong>${escapeHTML(shipment.awb_number)}</strong>
-          </td>
-
+          <td><strong>${escapeHTML(shipment.awb_number)}</strong></td>
           <td>
             ${escapeHTML(seller.business_name || "Seller")}
-            <br>
-            <small>${escapeHTML(seller.contact_person || "")}</small>
+            <br><small>${escapeHTML(seller.contact_person || "")}</small>
           </td>
-
           <td>
             ${escapeHTML(shipment.receiver_name)}
-            <br>
-            <small>${escapeHTML(shipment.receiver_phone)}</small>
+            <br><small>${escapeHTML(shipment.receiver_phone)}</small>
           </td>
-
-          <td>
-            ${escapeHTML(
-              courier.name || shipment.service_name || "—"
-            )}
-          </td>
-
+          <td>${escapeHTML(courier.name || shipment.service_name || "—")}</td>
           <td>${escapeHTML(shipment.parcel_weight)} KG</td>
-
+          <td><span class="seller-status">${escapeHTML(shipment.status)}</span></td>
           <td>
-            <span class="seller-status">
-              ${escapeHTML(shipment.status)}
-            </span>
-          </td>
-
-          <td>
-            <button
-              type="button"
-              class="manage-seller-shipment"
-              data-id="${escapeHTML(shipment.id)}">
-              Manage
-            </button>
+            <button type="button" class="manage-seller-shipment"
+              data-id="${escapeHTML(shipment.id)}">Manage</button>
           </td>
         </tr>
       `;
     }).join("");
 
     content.innerHTML = `
-      <div class="seller-admin-card">
-
-        <div class="seller-admin-heading">
+      <div style="background:white;padding:22px;border-radius:12px">
+        <div style="display:flex;justify-content:space-between;
+          align-items:center;gap:12px;flex-wrap:wrap">
           <div>
             <h2>Seller Shipments</h2>
             <p>Total bookings: ${sellerShipments.length}</p>
           </div>
-
           <button type="button" id="refreshSellerShipments">
             ↻ Refresh Shipments
           </button>
         </div>
 
-        <input
-          id="sellerShipmentSearch"
-          type="search"
+        <input id="sellerShipmentSearch" type="search"
           placeholder="Search AWB, seller or receiver..."
-          class="seller-search">
+          style="width:100%;padding:12px;margin:18px 0;
+          border:1px solid #d7deea;border-radius:8px">
 
         <div style="overflow-x:auto">
-          <table class="seller-table">
+          <table style="width:100%;border-collapse:collapse;min-width:850px">
             <thead>
               <tr>
                 <th>Internal AWB</th>
@@ -314,13 +295,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 <th>Action</th>
               </tr>
             </thead>
-
             <tbody id="sellerShipmentRows">
-              ${rows || `
-                <tr>
-                  <td colspan="7">No seller shipments found.</td>
-                </tr>
-              `}
+              ${rows || `<tr><td colspan="7">No seller shipments found.</td></tr>`}
             </tbody>
           </table>
         </div>
@@ -329,81 +305,28 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
 
       <style>
-        .seller-admin-card {
-          background: white;
-          padding: 22px;
-          border-radius: 12px;
-          overflow: hidden;
+        #sellerShipmentRows td,
+        #sellerShipmentRows th {
+          padding:12px;text-align:left;border-bottom:1px solid #e8edf4;
         }
-
-        .seller-admin-heading {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .seller-search {
-          width: 100%;
-          padding: 12px;
-          margin: 18px 0;
-          border: 1px solid #d7deea;
-          border-radius: 8px;
-          box-sizing: border-box;
-        }
-
-        .seller-table {
-          width: 100%;
-          border-collapse: collapse;
-          min-width: 850px;
-        }
-
-        .seller-table td,
-        .seller-table th {
-          padding: 12px;
-          text-align: left;
-          border-bottom: 1px solid #e8edf4;
-        }
-
-        .seller-table small {
-          color: #64748b;
-        }
-
+        #sellerShipmentRows small { color:#64748b; }
         .seller-status {
-          display: inline-block;
-          padding: 5px 9px;
-          border-radius: 20px;
-          background: #e8f1ff;
-          color: #174b88;
-          font-size: 12px;
-          font-weight: 700;
+          display:inline-block;padding:5px 9px;border-radius:20px;
+          background:#e8f1ff;color:#174b88;font-size:12px;font-weight:700;
         }
-
-        .seller-admin-card button {
-          padding: 10px 15px;
-          border: 0;
-          border-radius: 7px;
-          background: #174b88;
-          color: white;
-          cursor: pointer;
+        .manage-seller-shipment,#refreshSellerShipments {
+          padding:9px 13px;border:0;border-radius:7px;
+          background:#174b88;color:white;cursor:pointer;
         }
-
-        .seller-admin-card button:disabled {
-          opacity: .6;
-          cursor: not-allowed;
-        }
-
         #sellerShipmentDetails input,
         #sellerShipmentDetails select,
         #sellerShipmentDetails textarea {
-          display: block;
-          width: 100%;
-          padding: 11px;
-          margin: 7px 0 14px;
-          border: 1px solid #d7deea;
-          border-radius: 7px;
-          box-sizing: border-box;
+          width:100%;padding:11px;margin:7px 0 14px;
+          border:1px solid #d7deea;border-radius:7px;box-sizing:border-box;
+        }
+        #sellerShipmentDetails button {
+          padding:11px 16px;background:#174b88;color:white;
+          border:0;border-radius:7px;cursor:pointer;
         }
       </style>
     `;
@@ -415,29 +338,393 @@ document.addEventListener("DOMContentLoaded", () => {
       .addEventListener("input", event => {
         const term = event.target.value.toLowerCase();
 
-        document.querySelectorAll("#sellerShipmentRows tr")
-          .forEach(row => {
-            row.style.display =
-              row.textContent.toLowerCase().includes(term)
-                ? ""
-                : "none";
-          });
+        document.querySelectorAll("#sellerShipmentRows tr").forEach(row => {
+          row.style.display = row.textContent.toLowerCase().includes(term)
+            ? ""
+            : "none";
+        });
       });
 
-    document.querySelectorAll(".manage-seller-shipment")
-      .forEach(btn => {
-        btn.addEventListener("click", () => {
-          openShipmentDetails(
-            btn.dataset.id,
-            sellerMap,
-            courierMap
-          );
-        });
+    document.querySelectorAll(".manage-seller-shipment").forEach(btn => {
+      btn.addEventListener("click", () => {
+        openShipmentDetails(btn.dataset.id, sellerMap, courierMap);
+      });
+    });
+  }
+
+  // ==========================================
+  // COURIER RATE MANAGEMENT
+  // ==========================================
+
+  async function loadCourierRates() {
+    content.innerHTML = `
+      <div style="background:white;padding:22px;border-radius:12px">
+        <p>Loading courier rates...</p>
+      </div>
+    `;
+
+    const [rateResult, courierResult] = await Promise.all([
+      db.rpc("admin_list_platform_courier_rates"),
+      db.from("platform_couriers")
+        .select("id,name")
+        .eq("active", true)
+        .order("name")
+    ]);
+
+    if (rateResult.error) {
+      content.innerHTML = `
+        <div style="background:white;padding:22px;border-radius:12px">
+          <h3>Could not load courier rates</h3>
+          <p>${escapeHTML(rateResult.error.message)}</p>
+        </div>
+      `;
+      return;
+    }
+
+    if (courierResult.error) {
+      content.innerHTML = `
+        <div style="background:white;padding:22px;border-radius:12px">
+          <h3>Could not load courier partners</h3>
+          <p>${escapeHTML(courierResult.error.message)}</p>
+        </div>
+      `;
+      return;
+    }
+
+    courierRates = rateResult.data || [];
+    platformCouriers = courierResult.data || [];
+
+    renderCourierRates();
+  }
+
+  function renderCourierRates() {
+    const rows = courierRates.map(rate => {
+      const margin = Number(rate.seller_rate_per_kg || 0) -
+        Number(rate.rate_per_kg || 0);
+
+      return `
+        <tr>
+          <td><strong>${escapeHTML(rate.courier_name || "Courier")}</strong></td>
+          <td>${escapeHTML(rate.service_name)}</td>
+          <td>${escapeHTML(rate.from_zone)} → ${escapeHTML(rate.to_zone)}</td>
+          <td>${escapeHTML(rate.min_weight)}–${escapeHTML(rate.max_weight)} KG</td>
+          <td>₹${Number(rate.rate_per_kg || 0).toFixed(2)}</td>
+          <td>₹${Number(rate.minimum_charge || 0).toFixed(2)}</td>
+          <td>₹${Number(rate.cod_charge || 0).toFixed(2)}</td>
+          <td>₹${Number(rate.seller_rate_per_kg || 0).toFixed(2)}</td>
+          <td>₹${Number(rate.seller_minimum_charge || 0).toFixed(2)}</td>
+          <td>₹${Number(rate.seller_cod_charge || 0).toFixed(2)}</td>
+          <td style="color:${margin >= 0 ? "#15803d" : "#dc2626"}">
+            ₹${margin.toFixed(2)}
+          </td>
+          <td>${rate.active ? "Active" : "Inactive"}</td>
+          <td>
+            <button type="button" class="edit-courier-rate"
+              data-id="${escapeHTML(rate.id)}">Edit</button>
+            <button type="button" class="toggle-courier-rate"
+              data-id="${escapeHTML(rate.id)}"
+              data-active="${rate.active ? "true" : "false"}">
+              ${rate.active ? "Deactivate" : "Activate"}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    content.innerHTML = `
+      <div style="background:white;padding:22px;border-radius:12px">
+        <div style="display:flex;justify-content:space-between;
+          align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <h2>Courier Rate Management</h2>
+            <p>Manage courier costs, seller prices and TeraShip margins.</p>
+          </div>
+          <div>
+            <button type="button" id="refreshCourierRates">↻ Refresh</button>
+            <button type="button" id="addCourierRate">+ Add Courier Rate</button>
+          </div>
+        </div>
+
+        <div id="courierRateFormArea"></div>
+
+        <p><strong>Total rate records:</strong> ${courierRates.length}</p>
+
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;min-width:1250px">
+            <thead>
+              <tr>
+                <th>Courier</th>
+                <th>Service</th>
+                <th>Zones</th>
+                <th>Weight Slab</th>
+                <th>Courier ₹/KG</th>
+                <th>Courier Minimum</th>
+                <th>Courier COD</th>
+                <th>Seller ₹/KG</th>
+                <th>Seller Minimum</th>
+                <th>Seller COD</th>
+                <th>Margin/KG</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows || `<tr><td colspan="13" style="padding:18px">
+                No courier rates configured yet. Add your first rate to begin.
+              </td></tr>`}
+            </tbody>
+          </table>
+        </div>
+
+        <p style="margin-top:18px;color:#64748b;font-size:13px">
+          Margin per KG is calculated as seller rate minus courier cost.
+          Enter verified courier quotations before using these rates for live bookings.
+        </p>
+      </div>
+
+      <style>
+        #courierRateFormArea input,
+        #courierRateFormArea select {
+          width:100%;padding:10px;border:1px solid #d7deea;
+          border-radius:7px;box-sizing:border-box;
+        }
+        #courierRateFormArea label {
+          display:block;font-size:13px;font-weight:600;margin:10px 0 5px;
+        }
+        #courierRateFormArea .rate-grid {
+          display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+          gap:12px;
+        }
+        #courierRateFormArea button,
+        #refreshCourierRates,#addCourierRate,
+        .edit-courier-rate,.toggle-courier-rate {
+          padding:9px 13px;border:0;border-radius:7px;
+          background:#174b88;color:white;cursor:pointer;margin:3px;
+        }
+        #courierRateFormArea .cancel-rate {
+          background:#64748b;
+        }
+        #courierRateFormArea .rate-panel {
+          margin:20px 0;padding:18px;border:1px solid #d7deea;
+          border-radius:10px;background:#f8fafc;
+        }
+        #courierRateFormArea .rate-actions { margin-top:15px; }
+        #courierRateFormArea .rate-message { margin-top:10px; }
+        #courierRateFormArea .rate-check {
+          display:flex;align-items:center;gap:8px;margin-top:12px;
+        }
+        #courierRateFormArea .rate-check input { width:auto; }
+      </style>
+    `;
+
+    document.getElementById("refreshCourierRates")
+      .addEventListener("click", loadCourierRates);
+
+    document.getElementById("addCourierRate")
+      .addEventListener("click", () => showCourierRateForm(null));
+
+    document.querySelectorAll(".edit-courier-rate").forEach(button => {
+      button.addEventListener("click", () => {
+        const rate = courierRates.find(x => x.id === button.dataset.id);
+        if (rate) showCourierRateForm(rate);
+      });
+    });
+
+    document.querySelectorAll(".toggle-courier-rate").forEach(button => {
+      button.addEventListener("click", async () => {
+        const rate = courierRates.find(x => x.id === button.dataset.id);
+        if (!rate) return;
+
+        const nextActive = button.dataset.active !== "true";
+        const action = nextActive ? "activate" : "deactivate";
+
+        if (!confirm(`Are you sure you want to ${action} this rate?`)) return;
+
+        await saveCourierRate(rate, nextActive);
+      });
+    });
+  }
+
+  function showCourierRateForm(rate) {
+    editingRateId = rate ? rate.id : null;
+
+    const courierOptions = platformCouriers.map(courier => `
+      <option value="${escapeHTML(courier.id)}"
+        ${rate && rate.courier_id === courier.id ? "selected" : ""}>
+        ${escapeHTML(courier.name)}
+      </option>
+    `).join("");
+
+    const area = document.getElementById("courierRateFormArea");
+    if (!area) return;
+
+    area.innerHTML = `
+      <div class="rate-panel">
+        <h3>${rate ? "Edit Courier Rate" : "Add New Courier Rate"}</h3>
+
+        <form id="courierRateForm">
+          <div class="rate-grid">
+            <div>
+              <label>Courier Partner</label>
+              <select id="rateCourier" required>
+                <option value="">Select courier</option>
+                ${courierOptions}
+              </select>
+            </div>
+            <div>
+              <label>Service Name</label>
+              <input id="rateService" required
+                value="${escapeHTML(rate?.service_name || "Standard")}">
+            </div>
+            <div>
+              <label>From Zone</label>
+              <input id="rateFromZone" required
+                value="${escapeHTML(rate?.from_zone || "All")}">
+            </div>
+            <div>
+              <label>To Zone</label>
+              <input id="rateToZone" required
+                value="${escapeHTML(rate?.to_zone || "All")}">
+            </div>
+            <div>
+              <label>Minimum Weight (KG)</label>
+              <input id="rateMinWeight" type="number" min="0.01"
+                step="0.01" required value="${rate?.min_weight ?? 0.5}">
+            </div>
+            <div>
+              <label>Maximum Weight (KG)</label>
+              <input id="rateMaxWeight" type="number" min="0.01"
+                step="0.01" required value="${rate?.max_weight ?? 1}">
+            </div>
+            <div>
+              <label>Courier Cost per KG (₹)</label>
+              <input id="rateCourierPerKg" type="number" min="0"
+                step="0.01" required value="${rate?.rate_per_kg ?? 0}">
+            </div>
+            <div>
+              <label>Courier Minimum Charge (₹)</label>
+              <input id="rateCourierMinimum" type="number" min="0"
+                step="0.01" required value="${rate?.minimum_charge ?? 0}">
+            </div>
+            <div>
+              <label>Courier COD Charge (₹)</label>
+              <input id="rateCourierCod" type="number" min="0"
+                step="0.01" required value="${rate?.cod_charge ?? 0}">
+            </div>
+            <div>
+              <label>Seller Price per KG (₹)</label>
+              <input id="rateSellerPerKg" type="number" min="0"
+                step="0.01" required value="${rate?.seller_rate_per_kg ?? 0}">
+            </div>
+            <div>
+              <label>Seller Minimum Charge (₹)</label>
+              <input id="rateSellerMinimum" type="number" min="0"
+                step="0.01" required value="${rate?.seller_minimum_charge ?? 0}">
+            </div>
+            <div>
+              <label>Seller COD Charge (₹)</label>
+              <input id="rateSellerCod" type="number" min="0"
+                step="0.01" required value="${rate?.seller_cod_charge ?? 0}">
+            </div>
+          </div>
+
+          <label class="rate-check">
+            <input id="rateActive" type="checkbox"
+              ${rate ? (rate.active ? "checked" : "") : "checked"}>
+            Rate is active
+          </label>
+
+          <div class="rate-actions">
+            <button type="submit" id="saveCourierRate">Save Rate</button>
+            <button type="button" class="cancel-rate" id="cancelCourierRate">
+              Cancel
+            </button>
+          </div>
+          <p id="courierRateFormMessage" class="rate-message" role="status"></p>
+        </form>
+      </div>
+    `;
+
+    document.getElementById("cancelCourierRate")
+      .addEventListener("click", () => {
+        editingRateId = null;
+        area.innerHTML = "";
+      });
+
+    document.getElementById("courierRateForm")
+      .addEventListener("submit", async event => {
+        event.preventDefault();
+
+        const minWeight = Number(document.getElementById("rateMinWeight").value);
+        const maxWeight = Number(document.getElementById("rateMaxWeight").value);
+
+        if (maxWeight < minWeight) {
+          document.getElementById("courierRateFormMessage").textContent =
+            "Maximum weight must be greater than or equal to minimum weight.";
+          return;
+        }
+
+        const rateData = {
+          id: editingRateId,
+          courier_id: document.getElementById("rateCourier").value,
+          service_name: document.getElementById("rateService").value.trim(),
+          from_zone: document.getElementById("rateFromZone").value.trim(),
+          to_zone: document.getElementById("rateToZone").value.trim(),
+          min_weight: minWeight,
+          max_weight: maxWeight,
+          rate_per_kg: Number(document.getElementById("rateCourierPerKg").value),
+          minimum_charge: Number(document.getElementById("rateCourierMinimum").value),
+          cod_charge: Number(document.getElementById("rateCourierCod").value),
+          seller_rate_per_kg: Number(document.getElementById("rateSellerPerKg").value),
+          seller_minimum_charge: Number(document.getElementById("rateSellerMinimum").value),
+          seller_cod_charge: Number(document.getElementById("rateSellerCod").value),
+          active: document.getElementById("rateActive").checked
+        };
+
+        const saveButton = document.getElementById("saveCourierRate");
+        const messageBox = document.getElementById("courierRateFormMessage");
+
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+
+        try {
+          await saveCourierRate(rateData, rateData.active);
+          editingRateId = null;
+        } catch (error) {
+          messageBox.textContent = error.message || "Could not save rate.";
+          messageBox.style.color = "#dc2626";
+          saveButton.disabled = false;
+          saveButton.textContent = "Save Rate";
+        }
       });
   }
 
+  async function saveCourierRate(rate, activeValue) {
+    const { data, error } = await db.rpc("admin_save_platform_courier_rate", {
+      p_courier_id: rate.courier_id,
+      p_service_name: rate.service_name,
+      p_from_zone: rate.from_zone,
+      p_to_zone: rate.to_zone,
+      p_min_weight: rate.min_weight,
+      p_max_weight: rate.max_weight,
+      p_rate_per_kg: rate.rate_per_kg,
+      p_minimum_charge: rate.minimum_charge,
+      p_cod_charge: rate.cod_charge,
+      p_seller_rate_per_kg: rate.seller_rate_per_kg,
+      p_seller_minimum_charge: rate.seller_minimum_charge,
+      p_seller_cod_charge: rate.seller_cod_charge,
+      p_active: activeValue,
+      p_id: rate.id || null
+    });
+
+    if (error) throw error;
+
+    await loadCourierRates();
+    return data;
+  }
+
   async function openShipmentDetails(id, sellerMap, courierMap) {
-    const shipment = sellerShipments.find(item => item.id === id);
+    const shipment = sellerShipments.find(x => x.id === id);
     if (!shipment) return;
 
     const seller = sellerMap[shipment.seller_id] || {};
@@ -447,76 +734,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
     details.innerHTML = `
       <hr>
-
       <h3>Manage Shipment: ${escapeHTML(shipment.awb_number)}</h3>
 
-      <p><strong>Seller:</strong>
-        ${escapeHTML(seller.business_name || "—")}
-      </p>
-
-      <p><strong>Contact:</strong>
-        ${escapeHTML(seller.contact_person || "—")}
-      </p>
-
-      <p><strong>Seller Phone:</strong>
-        ${escapeHTML(seller.phone || "—")}
-      </p>
-
-      <p><strong>Receiver:</strong>
-        ${escapeHTML(shipment.receiver_name)}
-      </p>
-
-      <p><strong>Receiver Phone:</strong>
-        ${escapeHTML(shipment.receiver_phone)}
-      </p>
-
+      <p><strong>Seller:</strong> ${escapeHTML(seller.business_name || "—")}</p>
+      <p><strong>Contact:</strong> ${escapeHTML(seller.contact_person || "—")}</p>
+      <p><strong>Seller Phone:</strong> ${escapeHTML(seller.phone || "—")}</p>
+      <p><strong>Receiver:</strong> ${escapeHTML(shipment.receiver_name)}</p>
+      <p><strong>Receiver Phone:</strong> ${escapeHTML(shipment.receiver_phone)}</p>
       <p><strong>Receiver Address:</strong>
         ${escapeHTML(shipment.receiver_address)},
         ${escapeHTML(shipment.receiver_city)},
         ${escapeHTML(shipment.receiver_state)}
         - ${escapeHTML(shipment.receiver_pincode)}
       </p>
-
-      <p><strong>Courier:</strong>
-        ${escapeHTML(courier.name || "—")}
-      </p>
-
-      <p><strong>Payment:</strong>
-        ${escapeHTML(shipment.payment_mode)}
-      </p>
+      <p><strong>Courier:</strong> ${escapeHTML(courier.name || "—")}</p>
+      <p><strong>Payment:</strong> ${escapeHTML(shipment.payment_mode)}</p>
 
       <form id="sellerTrackingForm">
-
-        <label for="sellerNewStatus">Shipment Status</label>
-
+        <label>Shipment Status</label>
         <select id="sellerNewStatus" required>
           ${statuses.map(status => `
-            <option
-              value="${status}"
+            <option value="${status}"
               ${shipment.status === status ? "selected" : ""}>
               ${status.replaceAll("_", " ").toUpperCase()}
             </option>
           `).join("")}
         </select>
 
-        <label for="sellerTrackingLocation">Current Location</label>
+        <label>Current Location</label>
+        <input id="sellerTrackingLocation"
+          placeholder="Example: Ranchi Hub" required>
 
-        <input
-          id="sellerTrackingLocation"
-          placeholder="Example: Ranchi Hub"
-          required>
-
-        <label for="sellerTrackingRemarks">Tracking Remarks</label>
-
-        <textarea
-          id="sellerTrackingRemarks"
-          placeholder="Enter shipment update..."
-          required></textarea>
+        <label>Tracking Remarks</label>
+        <textarea id="sellerTrackingRemarks"
+          placeholder="Enter shipment update..." required></textarea>
 
         <button type="submit" id="saveSellerTracking">
           Save Tracking Update
         </button>
-
         <p id="sellerTrackingMessage" role="status"></p>
       </form>
     `;
@@ -525,26 +780,15 @@ document.addEventListener("DOMContentLoaded", () => {
       .addEventListener("submit", async event => {
         event.preventDefault();
 
-        const saveButton =
-          document.getElementById("saveSellerTracking");
+        const saveButton = document.getElementById("saveSellerTracking");
+        const statusMessage = document.getElementById("sellerTrackingMessage");
 
-        const statusMessage =
-          document.getElementById("sellerTrackingMessage");
-
-        const newStatus =
-          document.getElementById("sellerNewStatus").value;
-
-        const location =
-          document.getElementById("sellerTrackingLocation")
-            .value.trim();
-
-        const remarks =
-          document.getElementById("sellerTrackingRemarks")
-            .value.trim();
+        const newStatus = document.getElementById("sellerNewStatus").value;
+        const location = document.getElementById("sellerTrackingLocation").value.trim();
+        const remarks = document.getElementById("sellerTrackingRemarks").value.trim();
 
         if (!location || !remarks) {
-          statusMessage.textContent =
-            "Enter location and tracking remarks.";
+          statusMessage.textContent = "Enter location and tracking remarks.";
           return;
         }
 
@@ -567,58 +811,57 @@ document.addEventListener("DOMContentLoaded", () => {
             .insert({
               seller_shipment_id: shipment.id,
               status: newStatus,
-              location: location,
-              remarks: remarks
+              location,
+              remarks
             });
 
           if (eventError) {
             throw new Error(
-              "Status updated, but tracking event could not be saved: " +
+              "Status was updated, but tracking event could not be saved: " +
               eventError.message
             );
           }
 
-          statusMessage.textContent =
-            "Tracking update saved successfully.";
-
+          statusMessage.textContent = "Tracking update saved successfully.";
           statusMessage.style.color = "#15803d";
 
           await loadSellerShipments();
 
         } catch (error) {
-          statusMessage.textContent =
-            error.message || "Could not save update.";
-
+          statusMessage.textContent = error.message || "Could not save update.";
           statusMessage.style.color = "#dc2626";
-
           saveButton.disabled = false;
           saveButton.textContent = "Save Tracking Update";
         }
       });
 
-    details.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
+    details.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  // ==========================================
+  // SUPABASE CONNECTION CHECK
+  // ==========================================
 
   if (!db) {
     showLogin();
-    showMessage(
-      "Supabase connection is missing. Check supabase-config.js."
-    );
+    showMessage("Supabase connection is missing. Check supabase-config.js.");
     return;
   }
 
-  // Sidebar navigation
-  document.querySelectorAll(".super-nav-item")
-    .forEach(item => {
-      item.addEventListener("click", () => {
-        showView(item.dataset.view);
-      });
-    });
+  // ==========================================
+  // NAVIGATION
+  // ==========================================
 
-  // Super Admin login
+  document.querySelectorAll(".super-nav-item").forEach(item => {
+    item.addEventListener("click", () => {
+      showView(item.dataset.view);
+    });
+  });
+
+  // ==========================================
+  // SUPER ADMIN LOGIN
+  // ==========================================
+
   form.addEventListener("submit", async event => {
     event.preventDefault();
 
@@ -626,11 +869,8 @@ document.addEventListener("DOMContentLoaded", () => {
     button.textContent = "Verifying access...";
 
     try {
-      const email =
-        document.getElementById("superAdminEmail").value.trim();
-
-      const password =
-        document.getElementById("superAdminPassword").value;
+      const email = document.getElementById("superAdminEmail").value.trim();
+      const password = document.getElementById("superAdminPassword").value;
 
       const { data, error } = await db.auth.signInWithPassword({
         email,
@@ -643,14 +883,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (error) {
       showMessage(error.message || "Login failed.");
-
     } finally {
       button.disabled = false;
       button.textContent = "Sign in as Super Admin";
     }
   });
 
-  // Sign out
+  // ==========================================
+  // SUPER ADMIN LOGOUT
+  // ==========================================
+
   signOut.addEventListener("click", async () => {
     signOut.disabled = true;
 
@@ -665,7 +907,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.reload();
   });
 
-  // Restore login session
+  // ==========================================
+  // CHECK EXISTING LOGIN SESSION
+  // ==========================================
+
   async function checkSession() {
     showLogin();
 
@@ -682,4 +927,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   checkSession();
+
 });
