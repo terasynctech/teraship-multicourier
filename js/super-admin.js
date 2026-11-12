@@ -9,10 +9,31 @@ document.addEventListener("DOMContentLoaded", () => {
   const message = document.getElementById("superAdminMessage");
   const signOut = document.getElementById("superAdminSignOut");
   const content = document.getElementById("superAdminContent");
+  const pageTitle = document.getElementById("superPageTitle");
 
-  let franchises = [];
-  let editingId = null;
-  let slugTouched = false;
+  let currentUser = null;
+  let currentView = "overview";
+  let sellerShipments = [];
+
+  const statuses = [
+    "booked",
+    "picked_up",
+    "in_transit",
+    "out_for_delivery",
+    "delivered",
+    "cancelled",
+    "exception"
+  ];
+
+  function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    })[char]);
+  }
 
   function showMessage(text, isError = true) {
     message.textContent = text;
@@ -24,460 +45,10 @@ document.addEventListener("DOMContentLoaded", () => {
     app.hidden = true;
   }
 
-  function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, char => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    })[char]);
+  function showApp() {
+    authScreen.hidden = true;
+    app.hidden = false;
   }
-
-  function makeSlug(value) {
-    return String(value || "")
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "");
-  }
-
-  async function loadFranchises() {
-    content.innerHTML = "<p>Loading franchises...</p>";
-
-    const { data, error } = await db
-      .from("organizations")
-      .select("id, name, slug, created_at")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      content.innerHTML =
-        `<p style="color:#dc2626">Could not load franchises: ${escapeHTML(error.message)}</p>`;
-      return;
-    }
-
-    franchises = data || [];
-    renderFranchises();
-  }
-
-  function renderFranchises() {
-    content.innerHTML = `
-      <div style="background:white;padding:24px;border-radius:12px;margin-bottom:20px">
-        <h2 style="margin-top:0">Franchise Management</h2>
-        <p>Register and manage courier franchise businesses.</p>
-
-        <form id="franchiseForm">
-          <input type="hidden" id="franchiseId">
-
-          <label for="franchiseName">Franchise / Business Name</label>
-          <input id="franchiseName" type="text" required
-            placeholder="Example: Ranchi Courier Services"
-            style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:7px 0 15px">
-
-          <label for="franchiseSlug">Unique Franchise Slug</label>
-          <input id="franchiseSlug" type="text" required
-            placeholder="ranchi-courier-services"
-            style="display:block;width:100%;box-sizing:border-box;padding:12px;margin:7px 0 15px">
-
-          <button type="submit" id="franchiseSaveButton"
-            style="background:#173b78;color:white;padding:12px 22px;border:0;border-radius:7px;cursor:pointer">
-            Add Franchise
-          </button>
-
-          <button type="button" id="franchiseCancelButton"
-            style="display:none;padding:12px 18px;margin-left:8px">
-            Cancel Edit
-          </button>
-
-          <p id="franchiseMessage" role="status"></p>
-        </form>
-      </div>
-
-      <div style="background:white;padding:24px;border-radius:12px">
-        <h2 style="margin-top:0">Registered Franchises (${franchises.length})</h2>
-
-        <input id="franchiseSearch" type="search"
-          placeholder="Search franchise name or slug..."
-          style="display:block;width:100%;box-sizing:border-box;padding:12px;margin-bottom:18px">
-
-        <div id="franchiseList"></div>
-      </div>
-    `;
-
-    const franchiseForm = document.getElementById("franchiseForm");
-    const nameInput = document.getElementById("franchiseName");
-    const slugInput = document.getElementById("franchiseSlug");
-    const saveButton = document.getElementById("franchiseSaveButton");
-    const cancelButton = document.getElementById("franchiseCancelButton");
-    const searchInput = document.getElementById("franchiseSearch");
-
-    nameInput.addEventListener("input", () => {
-      if (!slugTouched) {
-        slugInput.value = makeSlug(nameInput.value);
-      }
-    });
-
-    slugInput.addEventListener("input", () => {
-      slugTouched = true;
-    });
-
-    searchInput.addEventListener("input", renderFranchiseList);
-
-    cancelButton.addEventListener("click", resetFranchiseForm);
-
-    franchiseForm.addEventListener("submit", async event => {
-      event.preventDefault();
-
-      const name = nameInput.value.trim();
-      const slug = makeSlug(slugInput.value);
-      const franchiseMessage = document.getElementById("franchiseMessage");
-
-      if (!name || !slug) {
-        franchiseMessage.textContent = "Please enter the franchise name and slug.";
-        return;
-      }
-
-      saveButton.disabled = true;
-      saveButton.textContent = "Saving...";
-      franchiseMessage.textContent = "";
-
-      try {
-        let result;
-
-        if (editingId) {
-          result = await db
-            .from("organizations")
-            .update({ name, slug })
-            .eq("id", editingId);
-        } else {
-          result = await db
-            .from("organizations")
-            .insert({ name, slug });
-        }
-
-        if (result.error) throw result.error;
-
-        franchiseMessage.textContent = editingId
-          ? "Franchise updated successfully."
-          : "New franchise created successfully.";
-
-        franchiseMessage.style.color = "#15803d";
-
-        resetFranchiseForm();
-        await loadFranchises();
-
-      } catch (error) {
-        franchiseMessage.textContent =
-          error.message || "Could not save franchise.";
-        franchiseMessage.style.color = "#dc2626";
-      } finally {
-        saveButton.disabled = false;
-        saveButton.textContent = editingId ? "Update Franchise" : "Add Franchise";
-      }
-    });
-
-    renderFranchiseList();
-  }
-
-  function resetFranchiseForm() {
-    editingId = null;
-    slugTouched = false;
-
-    const franchiseForm = document.getElementById("franchiseForm");
-    if (!franchiseForm) return;
-
-    franchiseForm.reset();
-
-    document.getElementById("franchiseId").value = "";
-    document.getElementById("franchiseSaveButton").textContent = "Add Franchise";
-    document.getElementById("franchiseCancelButton").style.display = "none";
-  }
-
-  function renderFranchiseList() {
-    const list = document.getElementById("franchiseList");
-    if (!list) return;
-
-    const search = (
-      document.getElementById("franchiseSearch").value || ""
-    ).toLowerCase().trim();
-
-    const filtered = franchises.filter(franchise =>
-      franchise.name.toLowerCase().includes(search) ||
-      franchise.slug.toLowerCase().includes(search)
-    );
-
-    if (!filtered.length) {
-      list.innerHTML = "<p>No franchises found.</p>";
-      return;
-    }
-
-    list.innerHTML = `
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse">
-          <thead>
-            <tr style="text-align:left;background:#eef2f8">
-              <th style="padding:12px">Franchise Name</th>
-              <th style="padding:12px">Slug</th>
-              <th style="padding:12px">Created</th>
-              <th style="padding:12px">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtered.map(franchise => `
-              <tr style="border-bottom:1px solid #e5e7eb">
-                <td style="padding:12px">${escapeHTML(franchise.name)}</td>
-                <td style="padding:12px">${escapeHTML(franchise.slug)}</td>
-                <td style="padding:12px">
-                  ${franchise.created_at
-                    ? escapeHTML(new Date(franchise.created_at).toLocaleDateString())
-                    : "—"}
-                </td>
-                <td style="padding:12px">
-                  <button type="button"
-                    data-edit-franchise="${escapeHTML(franchise.id)}"
-                    style="padding:8px 14px;cursor:pointer">
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
-
-    list.querySelectorAll("[data-edit-franchise]").forEach(editButton => {
-      editButton.addEventListener("click", () => {
-        const franchise = franchises.find(item =>
-          item.id === editButton.dataset.editFranchise
-        );
-
-        if (!franchise) return;
-
-        editingId = franchise.id;
-        slugTouched = true;
-
-        document.getElementById("franchiseName").value = franchise.name;
-        document.getElementById("franchiseSlug").value = franchise.slug;
-        document.getElementById("franchiseSaveButton").textContent =
-          "Update Franchise";
-        document.getElementById("franchiseCancelButton").style.display =
-          "inline-block";
-
-        document.getElementById("franchiseMessage").textContent =
-          "Editing: " + franchise.name;
-
-        document.getElementById("franchiseForm").scrollIntoView({
-          behavior: "smooth",
-          block: "start"
-        });
-      });
-    });
-  }
-
-  async function showOverview() {
-    content.innerHTML = "<p>Loading dashboard...</p>";
-
-    const { data, error } = await db
-      .from("organizations")
-      .select("id");
-
-    if (error) {
-      content.innerHTML =
-        `<p style="color:#dc2626">Dashboard error: ${escapeHTML(error.message)}</p>`;
-      return;
-    }
-
-    franchises = data || [];
-
-    content.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px">
-        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
-          <p style="color:#64748b">Registered Franchises</p>
-          <h1 style="font-size:32px;color:#1764d5">${franchises.length}</h1>
-          <span style="color:#64748b;font-size:12px">Total registered businesses</span>
-        </div>
-
-        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
-          <p style="color:#64748b">Seller Management</p>
-          <h2>Coming Soon</h2>
-          <span style="color:#64748b;font-size:12px">Seller network management</span>
-        </div>
-
-        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
-          <p style="color:#64748b">Courier Partners</p>
-          <h2>Coming Soon</h2>
-          <span style="color:#64748b;font-size:12px">Courier network management</span>
-        </div>
-
-        <div style="background:white;padding:24px;border-radius:12px;border:1px solid #e5eaf1">
-          <p style="color:#64748b">All Shipments</p>
-          <h2>Coming Soon</h2>
-          <span style="color:#64748b;font-size:12px">Platform-wide shipment overview</span>
-        </div>
-      </div>
-
-      <div style="background:white;padding:24px;border-radius:12px;margin-top:22px">
-        <h2>Welcome to TeraShip Control Center</h2>
-        <p style="color:#64748b">
-          Manage franchises, sellers, courier partners and shipping operations from one platform.
-        </p>
-      </div>
-    `;
-  }
-
-  function showComingSoon(title) {
-    content.innerHTML = `
-      <div style="background:white;padding:30px;border-radius:12px">
-        <h2>${escapeHTML(title)}</h2>
-        <p style="color:#64748b">This module is planned and will be connected to the database in the next development stage.</p>
-      </div>
-    `;
-  }
-
-async function loadSellers() {
-  content.innerHTML = "<p>Loading sellers...</p>";
-
-  const { data, error } = await db
-    .from("sellers")
-    .select("id, business_name, contact_person, email, phone, city, state, status, created_at")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    content.innerHTML = `
-      <p style="color:#dc2626">
-        Could not load sellers: ${escapeHTML(error.message)}
-      </p>`;
-    return;
-  }
-
-  renderSellers(data || []);
-}
-
-function renderSellers(sellers) {
-  content.innerHTML = `
-    <div style="background:white;padding:24px;border-radius:12px;margin-bottom:20px">
-      <h2 style="margin-top:0">Seller Management</h2>
-      <p>Manage direct TeraShip seller registrations and approvals.</p>
-
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin:20px 0">
-        <div><strong>${sellers.length}</strong><br>Total Sellers</div>
-        <div><strong>${sellers.filter(s => s.status === "pending").length}</strong><br>Pending</div>
-        <div><strong>${sellers.filter(s => s.status === "approved").length}</strong><br>Approved</div>
-        <div><strong>${sellers.filter(s => s.status === "rejected").length}</strong><br>Rejected</div>
-      </div>
-
-      <input id="sellerSearch" type="search"
-        placeholder="Search business, contact, email or phone..."
-        style="width:100%;box-sizing:border-box;padding:12px;margin-bottom:18px">
-
-      <div id="sellerList"></div>
-    </div>
-  `;
-
-  const searchInput = document.getElementById("sellerSearch");
-
-  function displayList() {
-    const search = searchInput.value.toLowerCase().trim();
-
-    const filtered = sellers.filter(s =>
-      [s.business_name, s.contact_person, s.email, s.phone]
-        .some(value => String(value || "").toLowerCase().includes(search))
-    );
-
-    const list = document.getElementById("sellerList");
-
-    if (!filtered.length) {
-      list.innerHTML = "<p>No sellers found.</p>";
-      return;
-    }
-
-    list.innerHTML = `
-      <div style="overflow-x:auto">
-        <table style="width:100%;border-collapse:collapse;min-width:850px">
-          <thead>
-            <tr style="background:#eef2f8;text-align:left">
-              <th style="padding:12px">Business</th>
-              <th style="padding:12px">Contact</th>
-              <th style="padding:12px">Email / Phone</th>
-              <th style="padding:12px">Location</th>
-              <th style="padding:12px">Status</th>
-              <th style="padding:12px">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtered.map(s => `
-              <tr style="border-bottom:1px solid #e5e7eb">
-                <td style="padding:12px">${escapeHTML(s.business_name)}</td>
-                <td style="padding:12px">${escapeHTML(s.contact_person)}</td>
-                <td style="padding:12px">
-                  ${escapeHTML(s.email)}<br>
-                  ${escapeHTML(s.phone)}
-                </td>
-                <td style="padding:12px">
-                  ${escapeHTML([s.city, s.state].filter(Boolean).join(", ") || "—")}
-                </td>
-                <td style="padding:12px">
-                  <strong>${escapeHTML(s.status)}</strong>
-                </td>
-                <td style="padding:12px;white-space:nowrap">
-                  ${s.status === "pending" ? `
-                    <button data-seller-id="${escapeHTML(s.id)}"
-                      data-seller-status="approved">Approve</button>
-                    <button data-seller-id="${escapeHTML(s.id)}"
-                      data-seller-status="rejected">Reject</button>
-                  ` : s.status === "approved" ? `
-                    <button data-seller-id="${escapeHTML(s.id)}"
-                      data-seller-status="suspended">Suspend</button>
-                  ` : `
-                    <button data-seller-id="${escapeHTML(s.id)}"
-                      data-seller-status="approved">Approve</button>
-                  `}
-                </td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </div>
-    `;
-
-    list.querySelectorAll("[data-seller-id]").forEach(actionButton => {
-      actionButton.addEventListener("click", async () => {
-        const sellerId = actionButton.dataset.sellerId;
-        const newStatus = actionButton.dataset.sellerStatus;
-
-        if (!confirm(`Are you sure you want to ${newStatus} this seller?`)) {
-          return;
-        }
-
-        actionButton.disabled = true;
-        actionButton.textContent = "Updating...";
-
-        const { error } = await db
-          .from("sellers")
-          .update({
-            status: newStatus,
-            updated_at: new Date().toISOString()
-          })
-          .eq("id", sellerId);
-
-        if (error) {
-          alert("Could not update seller: " + error.message);
-          actionButton.disabled = false;
-          actionButton.textContent =
-            newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
-          return;
-        }
-
-        alert("Seller status updated successfully.");
-        await loadSellers();
-      });
-    });
-  }
-
-  searchInput.addEventListener("input", displayList);
-  displayList();
-}
 
   async function verifySuperAdmin(user) {
     if (!user) {
@@ -491,35 +62,563 @@ function renderSellers(sellers) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    if (error) {
-      showLogin();
-      showMessage("Could not verify Super Admin access: " + error.message);
-      return false;
-    }
-
-    if (!data) {
+    if (error || !data) {
       await db.auth.signOut();
       showLogin();
-      showMessage("Access denied. This account is not a registered Super Admin.");
+
+      showMessage(
+        error
+          ? "Could not verify Super Admin access: " + error.message
+          : "Access denied. This account is not a registered Super Admin."
+      );
+
       return false;
     }
 
-    authScreen.hidden = true;
-    app.hidden = false;
+    currentUser = user;
+    showApp();
 
     document.getElementById("superAdminUser").textContent =
       "Signed in: " + user.email;
 
-        await showOverview();
-
+    await showView("overview");
     return true;
   }
 
+  function setActiveMenu(view) {
+    document.querySelectorAll(".super-nav-item").forEach(item => {
+      item.classList.toggle("active", item.dataset.view === view);
+    });
+  }
+
+  async function showView(view) {
+    currentView = view;
+    setActiveMenu(view);
+
+    const titles = {
+      overview: "Overview",
+      "seller-shipments": "Seller Shipments",
+      shipments: "All Shipments",
+      tracking: "Live Tracking",
+      sellers: "Seller Management",
+      franchises: "Franchise Management",
+      couriers: "Courier Partners",
+      cod: "COD & Wallet",
+      billing: "Billing & Invoices",
+      subscriptions: "Subscriptions",
+      reports: "Reports & Analytics",
+      settings: "Settings"
+    };
+
+    pageTitle.textContent = titles[view] || "Platform Management";
+
+    if (view === "seller-shipments") {
+      await loadSellerShipments();
+      return;
+    }
+
+    if (view === "overview") {
+      content.innerHTML = `
+        <div class="super-welcome">
+          <div>
+            <h2>Platform Dashboard</h2>
+            <p>Super Admin authentication successful.</p>
+            <p>Your platform administrator account is verified.</p>
+          </div>
+        </div>
+
+        <button type="button" id="openSellerShipments">
+          View Seller Shipments
+        </button>
+      `;
+
+      document.getElementById("openSellerShipments")
+        .addEventListener("click", () => {
+          showView("seller-shipments");
+        });
+
+      return;
+    }
+
+    content.innerHTML = `
+      <div style="background:white;padding:22px;border-radius:12px">
+        <h3>${escapeHTML(titles[view] || "Platform Management")}</h3>
+        <p>This section is not connected in this version.</p>
+      </div>
+    `;
+  }
+
+  async function loadSellerShipments() {
+    content.innerHTML = `
+      <div class="seller-admin-card">
+        <p>Loading seller shipments...</p>
+      </div>
+    `;
+
+    const { data, error } = await db
+      .from("seller_shipments")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      content.innerHTML = `
+        <div class="seller-admin-card">
+          <h3>Could not load seller shipments</h3>
+          <p>${escapeHTML(error.message)}</p>
+        </div>
+      `;
+      return;
+    }
+
+    sellerShipments = data || [];
+
+    const sellerIds = [...new Set(
+      sellerShipments.map(item => item.seller_id)
+    )];
+
+    const courierIds = [...new Set(
+      sellerShipments.map(item => item.courier_id).filter(Boolean)
+    )];
+
+    let sellers = [];
+    let couriers = [];
+
+    if (sellerIds.length) {
+      const result = await db
+        .from("sellers")
+        .select("id,business_name,contact_person,email,phone")
+        .in("id", sellerIds);
+
+      if (result.error) {
+        content.innerHTML = `
+          <div class="seller-admin-card">
+            <h3>Could not load seller details</h3>
+            <p>${escapeHTML(result.error.message)}</p>
+          </div>
+        `;
+        return;
+      }
+
+      sellers = result.data || [];
+    }
+
+    if (courierIds.length) {
+      const result = await db
+        .from("platform_couriers")
+        .select("id,name")
+        .in("id", courierIds);
+
+      if (result.error) {
+        content.innerHTML = `
+          <div class="seller-admin-card">
+            <h3>Could not load courier details</h3>
+            <p>${escapeHTML(result.error.message)}</p>
+          </div>
+        `;
+        return;
+      }
+
+      couriers = result.data || [];
+    }
+
+    const sellerMap = Object.fromEntries(
+      sellers.map(seller => [seller.id, seller])
+    );
+
+    const courierMap = Object.fromEntries(
+      couriers.map(courier => [courier.id, courier])
+    );
+
+    renderSellerShipments(sellerMap, courierMap);
+  }
+
+  function renderSellerShipments(sellerMap, courierMap) {
+    const rows = sellerShipments.map(shipment => {
+      const seller = sellerMap[shipment.seller_id] || {};
+      const courier = courierMap[shipment.courier_id] || {};
+
+      return `
+        <tr>
+          <td>
+            <strong>${escapeHTML(shipment.awb_number)}</strong>
+          </td>
+
+          <td>
+            ${escapeHTML(seller.business_name || "Seller")}
+            <br>
+            <small>${escapeHTML(seller.contact_person || "")}</small>
+          </td>
+
+          <td>
+            ${escapeHTML(shipment.receiver_name)}
+            <br>
+            <small>${escapeHTML(shipment.receiver_phone)}</small>
+          </td>
+
+          <td>
+            ${escapeHTML(
+              courier.name || shipment.service_name || "—"
+            )}
+          </td>
+
+          <td>${escapeHTML(shipment.parcel_weight)} KG</td>
+
+          <td>
+            <span class="seller-status">
+              ${escapeHTML(shipment.status)}
+            </span>
+          </td>
+
+          <td>
+            <button
+              type="button"
+              class="manage-seller-shipment"
+              data-id="${escapeHTML(shipment.id)}">
+              Manage
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    content.innerHTML = `
+      <div class="seller-admin-card">
+
+        <div class="seller-admin-heading">
+          <div>
+            <h2>Seller Shipments</h2>
+            <p>Total bookings: ${sellerShipments.length}</p>
+          </div>
+
+          <button type="button" id="refreshSellerShipments">
+            ↻ Refresh Shipments
+          </button>
+        </div>
+
+        <input
+          id="sellerShipmentSearch"
+          type="search"
+          placeholder="Search AWB, seller or receiver..."
+          class="seller-search">
+
+        <div style="overflow-x:auto">
+          <table class="seller-table">
+            <thead>
+              <tr>
+                <th>Internal AWB</th>
+                <th>Seller</th>
+                <th>Receiver</th>
+                <th>Courier</th>
+                <th>Weight</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody id="sellerShipmentRows">
+              ${rows || `
+                <tr>
+                  <td colspan="7">No seller shipments found.</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+        </div>
+
+        <div id="sellerShipmentDetails" style="margin-top:24px"></div>
+      </div>
+
+      <style>
+        .seller-admin-card {
+          background: white;
+          padding: 22px;
+          border-radius: 12px;
+          overflow: hidden;
+        }
+
+        .seller-admin-heading {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .seller-search {
+          width: 100%;
+          padding: 12px;
+          margin: 18px 0;
+          border: 1px solid #d7deea;
+          border-radius: 8px;
+          box-sizing: border-box;
+        }
+
+        .seller-table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 850px;
+        }
+
+        .seller-table td,
+        .seller-table th {
+          padding: 12px;
+          text-align: left;
+          border-bottom: 1px solid #e8edf4;
+        }
+
+        .seller-table small {
+          color: #64748b;
+        }
+
+        .seller-status {
+          display: inline-block;
+          padding: 5px 9px;
+          border-radius: 20px;
+          background: #e8f1ff;
+          color: #174b88;
+          font-size: 12px;
+          font-weight: 700;
+        }
+
+        .seller-admin-card button {
+          padding: 10px 15px;
+          border: 0;
+          border-radius: 7px;
+          background: #174b88;
+          color: white;
+          cursor: pointer;
+        }
+
+        .seller-admin-card button:disabled {
+          opacity: .6;
+          cursor: not-allowed;
+        }
+
+        #sellerShipmentDetails input,
+        #sellerShipmentDetails select,
+        #sellerShipmentDetails textarea {
+          display: block;
+          width: 100%;
+          padding: 11px;
+          margin: 7px 0 14px;
+          border: 1px solid #d7deea;
+          border-radius: 7px;
+          box-sizing: border-box;
+        }
+      </style>
+    `;
+
+    document.getElementById("refreshSellerShipments")
+      .addEventListener("click", loadSellerShipments);
+
+    document.getElementById("sellerShipmentSearch")
+      .addEventListener("input", event => {
+        const term = event.target.value.toLowerCase();
+
+        document.querySelectorAll("#sellerShipmentRows tr")
+          .forEach(row => {
+            row.style.display =
+              row.textContent.toLowerCase().includes(term)
+                ? ""
+                : "none";
+          });
+      });
+
+    document.querySelectorAll(".manage-seller-shipment")
+      .forEach(btn => {
+        btn.addEventListener("click", () => {
+          openShipmentDetails(
+            btn.dataset.id,
+            sellerMap,
+            courierMap
+          );
+        });
+      });
+  }
+
+  async function openShipmentDetails(id, sellerMap, courierMap) {
+    const shipment = sellerShipments.find(item => item.id === id);
+    if (!shipment) return;
+
+    const seller = sellerMap[shipment.seller_id] || {};
+    const courier = courierMap[shipment.courier_id] || {};
+
+    const details = document.getElementById("sellerShipmentDetails");
+
+    details.innerHTML = `
+      <hr>
+
+      <h3>Manage Shipment: ${escapeHTML(shipment.awb_number)}</h3>
+
+      <p><strong>Seller:</strong>
+        ${escapeHTML(seller.business_name || "—")}
+      </p>
+
+      <p><strong>Contact:</strong>
+        ${escapeHTML(seller.contact_person || "—")}
+      </p>
+
+      <p><strong>Seller Phone:</strong>
+        ${escapeHTML(seller.phone || "—")}
+      </p>
+
+      <p><strong>Receiver:</strong>
+        ${escapeHTML(shipment.receiver_name)}
+      </p>
+
+      <p><strong>Receiver Phone:</strong>
+        ${escapeHTML(shipment.receiver_phone)}
+      </p>
+
+      <p><strong>Receiver Address:</strong>
+        ${escapeHTML(shipment.receiver_address)},
+        ${escapeHTML(shipment.receiver_city)},
+        ${escapeHTML(shipment.receiver_state)}
+        - ${escapeHTML(shipment.receiver_pincode)}
+      </p>
+
+      <p><strong>Courier:</strong>
+        ${escapeHTML(courier.name || "—")}
+      </p>
+
+      <p><strong>Payment:</strong>
+        ${escapeHTML(shipment.payment_mode)}
+      </p>
+
+      <form id="sellerTrackingForm">
+
+        <label for="sellerNewStatus">Shipment Status</label>
+
+        <select id="sellerNewStatus" required>
+          ${statuses.map(status => `
+            <option
+              value="${status}"
+              ${shipment.status === status ? "selected" : ""}>
+              ${status.replaceAll("_", " ").toUpperCase()}
+            </option>
+          `).join("")}
+        </select>
+
+        <label for="sellerTrackingLocation">Current Location</label>
+
+        <input
+          id="sellerTrackingLocation"
+          placeholder="Example: Ranchi Hub"
+          required>
+
+        <label for="sellerTrackingRemarks">Tracking Remarks</label>
+
+        <textarea
+          id="sellerTrackingRemarks"
+          placeholder="Enter shipment update..."
+          required></textarea>
+
+        <button type="submit" id="saveSellerTracking">
+          Save Tracking Update
+        </button>
+
+        <p id="sellerTrackingMessage" role="status"></p>
+      </form>
+    `;
+
+    document.getElementById("sellerTrackingForm")
+      .addEventListener("submit", async event => {
+        event.preventDefault();
+
+        const saveButton =
+          document.getElementById("saveSellerTracking");
+
+        const statusMessage =
+          document.getElementById("sellerTrackingMessage");
+
+        const newStatus =
+          document.getElementById("sellerNewStatus").value;
+
+        const location =
+          document.getElementById("sellerTrackingLocation")
+            .value.trim();
+
+        const remarks =
+          document.getElementById("sellerTrackingRemarks")
+            .value.trim();
+
+        if (!location || !remarks) {
+          statusMessage.textContent =
+            "Enter location and tracking remarks.";
+          return;
+        }
+
+        saveButton.disabled = true;
+        saveButton.textContent = "Saving...";
+
+        try {
+          const { error: updateError } = await db
+            .from("seller_shipments")
+            .update({
+              status: newStatus,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", shipment.id);
+
+          if (updateError) throw updateError;
+
+          const { error: eventError } = await db
+            .from("seller_tracking_events")
+            .insert({
+              seller_shipment_id: shipment.id,
+              status: newStatus,
+              location: location,
+              remarks: remarks
+            });
+
+          if (eventError) {
+            throw new Error(
+              "Status updated, but tracking event could not be saved: " +
+              eventError.message
+            );
+          }
+
+          statusMessage.textContent =
+            "Tracking update saved successfully.";
+
+          statusMessage.style.color = "#15803d";
+
+          await loadSellerShipments();
+
+        } catch (error) {
+          statusMessage.textContent =
+            error.message || "Could not save update.";
+
+          statusMessage.style.color = "#dc2626";
+
+          saveButton.disabled = false;
+          saveButton.textContent = "Save Tracking Update";
+        }
+      });
+
+    details.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+
   if (!db) {
-    showMessage("Supabase connection is missing. Check supabase-config.js.");
+    showLogin();
+    showMessage(
+      "Supabase connection is missing. Check supabase-config.js."
+    );
     return;
   }
 
+  // Sidebar navigation
+  document.querySelectorAll(".super-nav-item")
+    .forEach(item => {
+      item.addEventListener("click", () => {
+        showView(item.dataset.view);
+      });
+    });
+
+  // Super Admin login
   form.addEventListener("submit", async event => {
     event.preventDefault();
 
@@ -527,8 +626,11 @@ function renderSellers(sellers) {
     button.textContent = "Verifying access...";
 
     try {
-      const email = document.getElementById("superAdminEmail").value.trim();
-      const password = document.getElementById("superAdminPassword").value;
+      const email =
+        document.getElementById("superAdminEmail").value.trim();
+
+      const password =
+        document.getElementById("superAdminPassword").value;
 
       const { data, error } = await db.auth.signInWithPassword({
         email,
@@ -538,14 +640,17 @@ function renderSellers(sellers) {
       if (error) throw error;
 
       await verifySuperAdmin(data.user);
+
     } catch (error) {
       showMessage(error.message || "Login failed.");
+
     } finally {
       button.disabled = false;
       button.textContent = "Sign in as Super Admin";
     }
   });
 
+  // Sign out
   signOut.addEventListener("click", async () => {
     signOut.disabled = true;
 
@@ -560,6 +665,7 @@ function renderSellers(sellers) {
     window.location.reload();
   });
 
+  // Restore login session
   async function checkSession() {
     showLogin();
 
@@ -574,46 +680,6 @@ function renderSellers(sellers) {
       await verifySuperAdmin(data.session.user);
     }
   }
-
-  const menuTitles = {
-    overview: "Overview",
-    franchises: "Franchise Management",
-    sellers: "Seller Management",
-    couriers: "Courier Partners",
-    shipments: "All Shipments",
-    tracking: "Live Tracking",
-    cod: "COD & Wallet",
-    billing: "Billing & Invoices",
-    subscriptions: "Subscriptions",
-    reports: "Reports & Analytics",
-    settings: "Settings"
-  };
-
-  document.querySelectorAll(".super-nav-item").forEach(item => {
-    item.addEventListener("click", async () => {
-      const view = item.dataset.view;
-      if (!view) return;
-
-      document.querySelectorAll(".super-nav-item").forEach(nav => {
-        nav.classList.remove("active");
-      });
-
-      item.classList.add("active");
-
-      const title = menuTitles[view] || "TeraShip";
-      document.getElementById("superPageTitle").textContent = title;
-
-      if (view === "overview") {
-        await showOverview();
-      } else if (view === "franchises") {
-        await loadFranchises();
-      } else if (view === "sellers") {
-        await loadSellers();
-      } else {
-        showComingSoon(title);
-      }
-    });
-  });
 
   checkSession();
 });
