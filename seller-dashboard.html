@@ -2,85 +2,65 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TeraShip Seller Dashboard</title>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f7fb;
-      color: #172033;
-    }
-    header {
-      background: #101d38;
-      color: white;
-      padding: 18px 5%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-    .brand { font-size: 23px; font-weight: bold; }
-    .brand span { color: #38bdf8; }
-    button {
-      border: 0;
-      border-radius: 7px;
-      padding: 11px 17px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .logout { background: #ef4444; color: white; }
-    main { max-width: 1150px; margin: 30px auto; padding: 0 18px; }
-    .welcome {
-      background: white;
-      padding: 25px;
-      border-radius: 12px;
-      margin-bottom: 22px;
-      box-shadow: 0 3px 15px #0000000a;
-    }
-    h1 { margin: 0 0 8px; font-size: 25px; }
-    .muted { color: #64748b; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 18px;
-    }
-    .card {
-      background: white;
-      padding: 22px;
-      border-radius: 12px;
-      box-shadow: 0 3px 15px #0000000a;
-    }
-    .card h3 { margin: 0 0 12px; font-size: 16px; }
-    .number { font-size: 27px; font-weight: bold; color: #2563eb; }
-    .section { margin-top: 24px; }
-    .profile p { margin: 10px 0; }
-    .status {
-      display: inline-block;
-      padding: 5px 12px;
-      border-radius: 20px;
-      background: #dcfce7;
-      color: #166534;
-      font-weight: bold;
-      font-size: 13px;
-    }
-    .notice {
-      background: #eff6ff;
-      border-left: 4px solid #2563eb;
-      padding: 16px;
-      border-radius: 7px;
-      line-height: 1.6;
-    }
-    #message { color: #dc2626; padding: 20px; }
-    @media(max-width:600px) {
-      header { padding: 15px; }
-      .brand { font-size: 19px; }
-      main { margin-top: 18px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeraShip Seller Dashboard</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f4f7fb;color:#172033}
+header{background:#101d38;color:white;padding:18px 5%;display:flex;justify-content:space-between;align-items:center}
+.brand{font-size:24px;font-weight:bold}
+.brand span{color:#38bdf8}
+button{border:0;border-radius:7px;padding:11px 17px;cursor:pointer;font-weight:bold}
+.logout{background:#ef4444;color:white}
+main{max-width:1200px;margin:28px auto;padding:0 18px}
+.welcome,.card{background:white;padding:23px;border-radius:12px;box-shadow:0 3px 15px #0000000a}
+.welcome{margin-bottom:20px}
+h1{margin:0 0 8px;font-size:25px}
+h2{font-size:20px;margin:0 0 18px}
+h3{font-size:16px;margin:0 0 14px}
+.muted{color:#64748b}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px}
+.number{font-size:27px;font-weight:bold;color:#2563eb}
+.section{margin-top:23px}
+.profile p{margin:10px 0}
+.status{display:inline-block;padding:5px 12px;border-radius:20px;background:#dcfce7;color:#166534;font-weight:bold;font-size:13px}
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:22px 0}
+.tab{background:#e2e8f0;color:#334155}
+.tab.active{background:#2563eb;color:white}
+.panel{display:none}
+.panel.active{display:block}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.field{display:flex;flex-direction:column;gap:7px}
+.field label{font-size:13px;font-weight:bold;color:#334155}
+.field input,.field select,.field textarea{
+width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:7px;font-size:14px;background:white
+}
+.field textarea{min-height:80px;resize:vertical}
+.full{grid-column:1/-1}
+.primary{background:#2563eb;color:white}
+.secondary{background:#e2e8f0;color:#1e293b}
+.notice{background:#eff6ff;border-left:4px solid #2563eb;padding:14px;border-radius:7px;line-height:1.6;margin-bottom:18px}
+.success{color:#15803d}
+.error{color:#dc2626}
+.message{margin-top:12px;font-size:14px;line-height:1.5}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:650px}
+th,td{text-align:left;padding:12px;border-bottom:1px solid #e2e8f0;font-size:13px}
+th{background:#f8fafc;color:#475569}
+.empty{text-align:center;padding:25px;color:#64748b}
+.small{font-size:12px;color:#64748b}
+@media(max-width:650px){
+ header{padding:15px}
+ .brand{font-size:20px}
+ main{margin-top:18px}
+ .form-grid{grid-template-columns:1fr}
+ .full{grid-column:auto}
+}
+</style>
 </head>
+
 <body>
 
 <header>
@@ -89,118 +69,590 @@
 </header>
 
 <main>
-  <div id="message">Checking your account...</div>
 
-  <div id="dashboard" style="display:none">
-    <section class="welcome">
-      <h1>Welcome, <span id="sellerName">Seller</span></h1>
-      <p class="muted">Manage your shipping business from one place.</p>
-      <span class="status">Account Approved</span>
-    </section>
+<div id="message">Checking your account...</div>
 
-    <section class="grid">
-      <div class="card">
-        <h3>Total Shipments</h3>
-        <div class="number">0</div>
-        <p class="muted">Your shipment activity</p>
-      </div>
-      <div class="card">
-        <h3>In Transit</h3>
-        <div class="number">0</div>
-        <p class="muted">Currently moving</p>
-      </div>
-      <div class="card">
-        <h3>Delivered</h3>
-        <div class="number">0</div>
-        <p class="muted">Successfully delivered</p>
-      </div>
-      <div class="card">
-        <h3>Courier Partners</h3>
-        <div class="number">Coming Soon</div>
-        <p class="muted">Platform-wide courier options</p>
-      </div>
-    </section>
+<div id="dashboard" style="display:none">
 
-    <section class="section card profile">
-      <h3>Business Profile</h3>
-      <p><strong>Business:</strong> <span id="businessName">-</span></p>
-      <p><strong>Contact Person:</strong> <span id="contactName">-</span></p>
-      <p><strong>Email:</strong> <span id="sellerEmail">-</span></p>
-      <p><strong>Phone:</strong> <span id="sellerPhone">-</span></p>
-      <p><strong>Location:</strong> <span id="sellerLocation">-</span></p>
-    </section>
+<section class="welcome">
+<h1>Welcome, <span id="sellerName">Seller</span></h1>
+<p class="muted">Manage your shipping business from one place.</p>
+<span class="status">Account Approved</span>
+</section>
 
-    <section class="section">
-      <div class="notice">
-        <strong>Shipping services are being prepared.</strong><br>
-        Shipment booking, courier selection, live tracking, COD and billing
-        will be activated after the secure seller shipping system is connected.
-      </div>
-    </section>
-  </div>
+<section class="grid">
+<div class="card">
+<h3>Total Shipments</h3>
+<div class="number" id="totalCount">0</div>
+<p class="muted">All your bookings</p>
+</div>
+
+<div class="card">
+<h3>In Transit</h3>
+<div class="number" id="transitCount">0</div>
+<p class="muted">Currently moving</p>
+</div>
+
+<div class="card">
+<h3>Delivered</h3>
+<div class="number" id="deliveredCount">0</div>
+<p class="muted">Successfully delivered</p>
+</div>
+
+<div class="card">
+<h3>Courier Partners</h3>
+<div class="number" id="courierCount">0</div>
+<p class="muted">Active platform partners</p>
+</div>
+</section>
+
+<section class="section card profile">
+<h3>Business Profile</h3>
+<p><strong>Business:</strong> <span id="businessName">-</span></p>
+<p><strong>Contact Person:</strong> <span id="contactName">-</span></p>
+<p><strong>Email:</strong> <span id="sellerEmail">-</span></p>
+<p><strong>Phone:</strong> <span id="sellerPhone">-</span></p>
+<p><strong>Location:</strong> <span id="sellerLocation">-</span></p>
+</section>
+
+<div class="tabs">
+<button class="tab active" data-panel="bookingPanel">+ New Shipment</button>
+<button class="tab" data-panel="historyPanel">Shipment History</button>
+</div>
+
+<!-- BOOKING PANEL -->
+<section class="panel active card" id="bookingPanel">
+
+<h2>Book a New Shipment</h2>
+
+<div class="notice">
+<strong>Seller booking system</strong><br>
+Your shipment details will be saved securely in TeraShip.
+Courier charges are not yet configured. Actual carrier booking and carrier AWB generation will require courier API integration.
+</div>
+
+<form id="bookingForm">
+
+<h3>1. Sender Details</h3>
+
+<div class="form-grid">
+
+<div class="field">
+<label>Sender Name</label>
+<input id="senderName" required>
+</div>
+
+<div class="field">
+<label>Sender Phone</label>
+<input id="senderPhone" type="tel" required>
+</div>
+
+<div class="field full">
+<label>Pickup Address</label>
+<textarea id="senderAddress" required></textarea>
+</div>
+
+<div class="field">
+<label>Pickup City</label>
+<input id="senderCity" required>
+</div>
+
+<div class="field">
+<label>Pickup State</label>
+<input id="senderState" required>
+</div>
+
+<div class="field">
+<label>Pickup Pincode</label>
+<input id="senderPincode" maxlength="6" pattern="[0-9]{6}" required>
+</div>
+
+</div>
+
+<hr style="border:0;border-top:1px solid #e2e8f0;margin:25px 0">
+
+<h3>2. Receiver Details</h3>
+
+<div class="form-grid">
+
+<div class="field">
+<label>Receiver Name</label>
+<input id="receiverName" required>
+</div>
+
+<div class="field">
+<label>Receiver Phone</label>
+<input id="receiverPhone" type="tel" required>
+</div>
+
+<div class="field full">
+<label>Delivery Address</label>
+<textarea id="receiverAddress" required></textarea>
+</div>
+
+<div class="field">
+<label>Delivery City</label>
+<input id="receiverCity" required>
+</div>
+
+<div class="field">
+<label>Delivery State</label>
+<input id="receiverState" required>
+</div>
+
+<div class="field">
+<label>Delivery Pincode</label>
+<input id="receiverPincode" maxlength="6" pattern="[0-9]{6}" required>
+</div>
+
+</div>
+
+<hr style="border:0;border-top:1px solid #e2e8f0;margin:25px 0">
+
+<h3>3. Parcel and Courier Details</h3>
+
+<div class="form-grid">
+
+<div class="field">
+<label>Parcel Weight (KG)</label>
+<input id="parcelWeight" type="number" min="0.01" step="0.01" required>
+</div>
+
+<div class="field">
+<label>Courier Partner</label>
+<select id="courierSelect" required>
+<option value="">Loading courier partners...</option>
+</select>
+</div>
+
+<div class="field">
+<label>Payment Mode</label>
+<select id="paymentMode" required>
+<option value="prepaid">Prepaid</option>
+<option value="cod">Cash on Delivery (COD)</option>
+</select>
+</div>
+
+<div class="field" id="codField" style="display:none">
+<label>COD Amount (₹)</label>
+<input id="codAmount" type="number" min="0" step="0.01" value="0">
+</div>
+
+<div class="field full">
+<label>Shipment Notes (Optional)</label>
+<textarea id="shipmentNotes" placeholder="Parcel description or special instructions"></textarea>
+</div>
+
+</div>
+
+<p class="small" id="rateNotice">
+Courier rates are not configured yet. Charges will be confirmed separately.
+</p>
+
+<div style="margin-top:22px">
+<button type="submit" class="primary" id="bookBtn" disabled>
+Book Shipment
+</button>
+</div>
+
+<div id="bookingMessage" class="message"></div>
+
+</form>
+</section>
+
+<!-- HISTORY PANEL -->
+<section class="panel card" id="historyPanel">
+
+<h2>My Shipment History</h2>
+
+<div style="margin-bottom:15px">
+<button class="secondary" id="refreshBtn">Refresh Shipments</button>
+</div>
+
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Internal AWB</th>
+<th>Receiver</th>
+<th>Courier</th>
+<th>Weight</th>
+<th>Payment</th>
+<th>Status</th>
+<th>Date</th>
+</tr>
+</thead>
+<tbody id="shipmentRows">
+<tr><td colspan="7" class="empty">Loading shipments...</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="small">
+These are TeraShip internal booking references, not carrier-generated AWBs.
+</p>
+
+<div id="historyMessage" class="message"></div>
+</section>
+
+</div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 
 <script>
-(async function () {
-  const db = window.supabaseClient;
-  const message = document.getElementById("message");
+(async function(){
 
-  if (!db) {
-    message.textContent = "Connection error. Please contact support.";
+const db = window.supabaseClient;
+const message = document.getElementById("message");
+
+let currentUser = null;
+let currentSeller = null;
+let courierList = [];
+
+if(!db){
+  message.textContent = "Connection error. Please check Supabase configuration.";
+  return;
+}
+
+const {data:authData,error:authError} = await db.auth.getUser();
+
+if(authError || !authData.user){
+  window.location.href = "seller-login.html";
+  return;
+}
+
+currentUser = authData.user;
+
+if(!currentUser.email_confirmed_at){
+  await db.auth.signOut();
+  window.location.href = "seller-login.html";
+  return;
+}
+
+const {data:seller,error:sellerError} = await db
+.from("sellers")
+.select("id,business_name,contact_person,email,phone,pickup_address,city,state,pincode,status")
+.eq("id",currentUser.id)
+.maybeSingle();
+
+if(sellerError || !seller){
+  message.textContent = "Could not load your seller profile: " +
+    (sellerError?.message || "Profile not found");
+  return;
+}
+
+if(seller.status !== "approved"){
+  await db.auth.signOut();
+  window.location.href = "seller-login.html";
+  return;
+}
+
+currentSeller = seller;
+
+// PROFILE
+document.getElementById("sellerName").textContent = seller.contact_person || "Seller";
+document.getElementById("businessName").textContent = seller.business_name || "-";
+document.getElementById("contactName").textContent = seller.contact_person || "-";
+document.getElementById("sellerEmail").textContent = seller.email || currentUser.email || "-";
+document.getElementById("sellerPhone").textContent = seller.phone || "-";
+document.getElementById("sellerLocation").textContent =
+  [seller.city,seller.state].filter(Boolean).join(", ") || "Not provided";
+
+// PREFILL SENDER DETAILS
+document.getElementById("senderName").value =
+  seller.contact_person || seller.business_name || "";
+document.getElementById("senderPhone").value = seller.phone || "";
+document.getElementById("senderAddress").value = seller.pickup_address || "";
+document.getElementById("senderCity").value = seller.city || "";
+document.getElementById("senderState").value = seller.state || "";
+document.getElementById("senderPincode").value = seller.pincode || "";
+
+message.style.display = "none";
+document.getElementById("dashboard").style.display = "block";
+
+// LOAD COURIERS
+await loadCouriers();
+
+// LOAD SHIPMENT HISTORY
+await loadShipments();
+
+async function loadCouriers(){
+
+  const select = document.getElementById("courierSelect");
+  select.innerHTML = '<option value="">Select courier partner</option>';
+
+  const {data,error} = await db
+    .from("platform_couriers")
+    .select("id,name,code,service_type")
+    .eq("active",true)
+    .order("name");
+
+  if(error){
+    document.getElementById("bookingMessage").textContent =
+      "Could not load couriers: " + error.message;
+    document.getElementById("bookingMessage").className = "message error";
     return;
   }
 
-  const { data: authData, error: authError } = await db.auth.getUser();
+  courierList = data || [];
 
-  if (authError || !authData.user) {
-    window.location.href = "seller-login.html";
+  courierList.forEach(courier => {
+    const option = document.createElement("option");
+    option.value = courier.id;
+    option.textContent = courier.name +
+      (courier.service_type ? " - " + courier.service_type : "");
+    select.appendChild(option);
+  });
+
+  document.getElementById("courierCount").textContent = courierList.length;
+
+  if(courierList.length){
+    document.getElementById("bookBtn").disabled = false;
+  }else{
+    document.getElementById("bookingMessage").textContent =
+      "No active courier partners are available.";
+    document.getElementById("bookingMessage").className = "message error";
+  }
+
+  // Check whether platform rates exist
+  const {data:rates,error:rateError} = await db
+    .from("platform_courier_rates")
+    .select("id")
+    .eq("active",true)
+    .limit(1);
+
+  if(!rateError && (!rates || rates.length === 0)){
+    document.getElementById("rateNotice").textContent =
+      "No courier rates configured yet. Booking charges will be confirmed separately.";
+  }
+}
+
+async function loadShipments(){
+
+  const tbody = document.getElementById("shipmentRows");
+  tbody.innerHTML = "";
+
+  const {data:shipments,error} = await db
+    .from("seller_shipments")
+    .select("id,awb_number,receiver_name,courier_id,service_name,parcel_weight,payment_mode,status,created_at")
+    .order("created_at",{ascending:false})
+    .limit(100);
+
+  if(error){
+    tbody.innerHTML = "";
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 7;
+    td.className = "empty";
+    td.textContent = "Could not load shipment history: " + error.message;
+    tr.appendChild(td);
+    tbody.appendChild(tr);
     return;
   }
 
-  const user = authData.user;
+  const rows = shipments || [];
 
-  if (!user.email_confirmed_at) {
-    await db.auth.signOut();
-    window.location.href = "seller-login.html";
+  document.getElementById("totalCount").textContent = rows.length;
+  document.getElementById("transitCount").textContent =
+    rows.filter(s => s.status === "in_transit").length;
+  document.getElementById("deliveredCount").textContent =
+    rows.filter(s => s.status === "delivered").length;
+
+  if(!rows.length){
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 7;
+    td.className = "empty";
+    td.textContent = "No shipments booked yet.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
     return;
   }
 
-  const { data: seller, error } = await db
-    .from("sellers")
-    .select("id, business_name, contact_person, email, phone, city, state, status")
-    .eq("id", user.id)
-    .maybeSingle();
+  rows.forEach(shipment => {
 
-  if (error || !seller) {
-    message.textContent = "Could not load your seller profile. Please contact support.";
+    const tr = document.createElement("tr");
+
+    const values = [
+      shipment.awb_number,
+      shipment.receiver_name,
+      shipment.service_name || "-",
+      (shipment.parcel_weight || 0) + " KG",
+      (shipment.payment_mode || "-").toUpperCase(),
+      (shipment.status || "booked").replaceAll("_"," ").toUpperCase(),
+      shipment.created_at
+        ? new Date(shipment.created_at).toLocaleDateString("en-IN")
+        : "-"
+    ];
+
+    values.forEach(value => {
+      const td = document.createElement("td");
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// TABS
+document.querySelectorAll(".tab").forEach(tab => {
+  tab.addEventListener("click",function(){
+
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+
+    this.classList.add("active");
+    document.getElementById(this.dataset.panel).classList.add("active");
+  });
+});
+
+// COD FIELD
+document.getElementById("paymentMode").addEventListener("change",function(){
+
+  const isCOD = this.value === "cod";
+
+  document.getElementById("codField").style.display =
+    isCOD ? "flex" : "none";
+
+  document.getElementById("codAmount").required = isCOD;
+
+  if(!isCOD){
+    document.getElementById("codAmount").value = "0";
+  }
+});
+
+// GENERATE INTERNAL AWB
+function generateAWB(){
+
+  const random = new Uint32Array(1);
+  window.crypto.getRandomValues(random);
+
+  return "TS" +
+    Date.now().toString().slice(-8) +
+    random[0].toString().slice(0,4);
+}
+
+// BOOK SHIPMENT
+document.getElementById("bookingForm").addEventListener("submit",async function(e){
+
+  e.preventDefault();
+
+  const btn = document.getElementById("bookBtn");
+  const bookingMessage = document.getElementById("bookingMessage");
+
+  if(!currentSeller || !currentUser){
+    bookingMessage.textContent = "Seller account is not ready.";
+    bookingMessage.className = "message error";
     return;
   }
 
-  if (seller.status !== "approved") {
-    await db.auth.signOut();
-    window.location.href = "seller-login.html";
+  const courierId = document.getElementById("courierSelect").value;
+  const courier = courierList.find(c => c.id === courierId);
+
+  if(!courier){
+    bookingMessage.textContent = "Please select a valid courier partner.";
+    bookingMessage.className = "message error";
     return;
   }
 
-  document.getElementById("sellerName").textContent = seller.contact_person || "Seller";
-  document.getElementById("businessName").textContent = seller.business_name || "-";
-  document.getElementById("contactName").textContent = seller.contact_person || "-";
-  document.getElementById("sellerEmail").textContent = seller.email || user.email || "-";
-  document.getElementById("sellerPhone").textContent = seller.phone || "-";
-  document.getElementById("sellerLocation").textContent =
-    [seller.city, seller.state].filter(Boolean).join(", ") || "Not provided";
+  const paymentMode = document.getElementById("paymentMode").value;
+  const codAmount = Number(document.getElementById("codAmount").value || 0);
 
-  message.style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
+  if(paymentMode === "cod" && codAmount <= 0){
+    bookingMessage.textContent = "Please enter a valid COD amount.";
+    bookingMessage.className = "message error";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Saving booking...";
+  bookingMessage.textContent = "";
+
+  const booking = {
+    seller_id: currentUser.id,
+    awb_number: generateAWB(),
+
+    courier_id: courier.id,
+    service_name: courier.name,
+
+    sender_name: document.getElementById("senderName").value.trim(),
+    sender_phone: document.getElementById("senderPhone").value.trim(),
+    sender_address: document.getElementById("senderAddress").value.trim(),
+    sender_city: document.getElementById("senderCity").value.trim(),
+    sender_state: document.getElementById("senderState").value.trim(),
+    sender_pincode: document.getElementById("senderPincode").value.trim(),
+
+    receiver_name: document.getElementById("receiverName").value.trim(),
+    receiver_phone: document.getElementById("receiverPhone").value.trim(),
+    receiver_address: document.getElementById("receiverAddress").value.trim(),
+    receiver_city: document.getElementById("receiverCity").value.trim(),
+    receiver_state: document.getElementById("receiverState").value.trim(),
+    receiver_pincode: document.getElementById("receiverPincode").value.trim(),
+
+    parcel_weight: Number(document.getElementById("parcelWeight").value),
+    payment_mode: paymentMode,
+    cod_amount: paymentMode === "cod" ? codAmount : 0,
+    courier_charge: 0,
+    status: "booked",
+    notes: document.getElementById("shipmentNotes").value.trim()
+  };
+
+  const {data,error} = await db
+    .from("seller_shipments")
+    .insert(booking)
+    .select("id,awb_number")
+    .single();
+
+  if(error){
+
+    bookingMessage.textContent =
+      "Booking could not be saved: " + error.message;
+
+    bookingMessage.className = "message error";
+
+  }else{
+
+    bookingMessage.textContent =
+      "Shipment saved successfully! Your TeraShip internal AWB is " +
+      data.awb_number +
+      ". This is not yet a carrier-generated AWB.";
+
+    bookingMessage.className = "message success";
+
+    document.getElementById("bookingForm").reset();
+
+    // Restore sender details after reset
+    document.getElementById("senderName").value =
+      currentSeller.contact_person || currentSeller.business_name || "";
+    document.getElementById("senderPhone").value = currentSeller.phone || "";
+    document.getElementById("senderAddress").value = currentSeller.pickup_address || "";
+    document.getElementById("senderCity").value = currentSeller.city || "";
+    document.getElementById("senderState").value = currentSeller.state || "";
+    document.getElementById("senderPincode").value = currentSeller.pincode || "";
+
+    document.getElementById("codField").style.display = "none";
+
+    await loadShipments();
+  }
+
+  btn.disabled = courierList.length === 0;
+  btn.textContent = "Book Shipment";
+
+});
+
+document.getElementById("refreshBtn").addEventListener("click",loadShipments);
+
 })();
 
-document.getElementById("logoutBtn").addEventListener("click", async function () {
-  if (window.supabaseClient) {
+document.getElementById("logoutBtn").addEventListener("click",async function(){
+
+  if(window.supabaseClient){
     await window.supabaseClient.auth.signOut();
   }
+
   window.location.href = "seller-login.html";
 });
 </script>
