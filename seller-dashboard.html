@@ -104,6 +104,12 @@ th{background:#f8fafc;color:#475569}
 <div class="number" id="courierCount">0</div>
 <p class="muted">Active platform partners</p>
 </div>
+
+<div class="card">
+<h3>Wallet Balance</h3>
+<div class="number" id="walletBalance">₹0.00</div>
+<p class="muted" id="walletBalanceNote">Loading wallet balance...</p>
+</div>
 </section>
 
 <section class="section card profile">
@@ -375,8 +381,36 @@ document.getElementById("dashboard").style.display = "block";
 // LOAD COURIERS
 await loadCouriers();
 
+// LOAD WALLET BALANCE (display-only)
+await loadWalletBalance();
+
 // LOAD SHIPMENT HISTORY
 await loadShipments();
+
+async function loadWalletBalance(){
+  const balanceEl = document.getElementById("walletBalance");
+  const noteEl = document.getElementById("walletBalanceNote");
+
+  const {data:wallet,error} = await db
+    .from("seller_wallets")
+    .select("available_balance")
+    .eq("seller_id",currentUser.id)
+    .maybeSingle();
+
+  if(error || !wallet){
+    balanceEl.textContent = "Unavailable";
+    noteEl.textContent = error ? "Could not load wallet balance." : "Wallet not found.";
+    return;
+  }
+
+  const balance = Number(wallet.available_balance || 0);
+  balanceEl.textContent = balance.toLocaleString("en-IN",{
+    style:"currency",
+    currency:"INR",
+    minimumFractionDigits:2
+  });
+  noteEl.textContent = "Available funds for shipping";
+}
 
 async function loadCouriers(){
 
