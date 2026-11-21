@@ -115,6 +115,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     pageTitle.textContent = titles[view] || "Platform Management";
 
+if (view === "sellers") {
+  await loadSellerManagement();
+  return;
+}
+
     if (view === "seller-shipments") {
       await loadSellerShipments();
       return;
@@ -161,6 +166,110 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
   
+  
+async function loadSellerManagement() {
+  content.innerHTML = `
+    <div style="background:white;padding:22px;border-radius:12px">
+      <h2>Seller Management</h2>
+      <p>Loading seller records...</p>
+    </div>
+  `;
+
+  const { data, error } = await db
+    .from("sellers")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    content.innerHTML = `
+      <div style="background:white;padding:22px;border-radius:12px">
+        <h2>Could not load sellers</h2>
+        <p>${escapeHTML(error.message)}</p>
+        <button type="button" id="retrySellerManagement">Retry</button>
+      </div>
+    `;
+
+    document.getElementById("retrySellerManagement")
+      .addEventListener("click", loadSellerManagement);
+    return;
+  }
+
+  const sellerRows = (data || []).map(seller => `
+    <tr>
+      <td>${escapeHTML(seller.business_name || "")}</td>
+      <td>${escapeHTML(seller.contact_person || "")}</td>
+      <td>${escapeHTML(seller.phone || "")}</td>
+      <td>${escapeHTML(seller.email || "")}</td>
+      <td>${escapeHTML(seller.status || "")}</td>
+      <td>
+        ${seller.status !== "approved" ? `
+          <button type="button" class="seller-approve"
+            data-id="${escapeHTML(seller.id)}">Approve</button>
+        ` : "Approved"}
+        ${seller.status !== "rejected" ? `
+          <button type="button" class="seller-reject"
+            data-id="${escapeHTML(seller.id)}">Reject</button>
+        ` : "Rejected"}
+      </td>
+    </tr>
+  `).join("");
+
+  content.innerHTML = `
+    <div style="background:white;padding:22px;border-radius:12px;overflow-x:auto">
+      <h2>Seller Management</h2>
+      <p>Total sellers: ${(data || []).length}</p>
+      <button type="button" id="refreshSellerManagement">Refresh</button>
+      <table style="width:100%;border-collapse:collapse;margin-top:16px">
+        <thead>
+          <tr>
+            <th>Business</th>
+            <th>Contact</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sellerRows || '<tr><td colspan="6">No sellers found.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  document.getElementById("refreshSellerManagement")
+    .addEventListener("click", loadSellerManagement);
+
+  content.querySelectorAll(".seller-approve").forEach(button => {
+    button.addEventListener("click", () =>
+      updateSellerApproval(button.dataset.id, "approved")
+    );
+  });
+
+  content.querySelectorAll(".seller-reject").forEach(button => {
+    button.addEventListener("click", () =>
+      updateSellerApproval(button.dataset.id, "rejected")
+    );
+  });
+}
+
+async function updateSellerApproval(sellerId, newStatus) {
+  if (!confirm(`Are you sure you want to ${newStatus} this seller?`)) return;
+
+  const { error } = await db
+    .from("sellers")
+    .update({ status: newStatus })
+    .eq("id", sellerId);
+
+  if (error) {
+    alert("Could not update seller: " + error.message);
+    return;
+  }
+
+  alert("Seller status updated successfully.");
+  await loadSellerManagement();
+}
+
   async function loadSellerShipments() {
     content.innerHTML = `
       <div style="background:white;padding:22px;border-radius:12px">
