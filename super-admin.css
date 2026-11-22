@@ -3,75 +3,114 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+:root {
+  --navy: #102747;
+  --navy-dark: #0a1b33;
+  --blue: #2563eb;
+  --blue-light: #eff6ff;
+  --background: #f4f7fb;
+  --white: #ffffff;
+  --text: #172b4d;
+  --muted: #718096;
+  --border: #e5eaf1;
+  --green: #15803d;
+  --red: #dc2626;
+}
+
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f1f5f9;
-  color: #172554;
+  font-family: Inter, Arial, sans-serif;
+  background: var(--background);
+  color: var(--text);
+  font-size: 14px;
 }
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* LOGIN */
 
 .super-auth {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  background: linear-gradient(135deg, #101b35, #243d70);
+  padding: 24px;
+  background:
+    radial-gradient(circle at 15% 15%, #315b91 0, transparent 35%),
+    linear-gradient(135deg, #08172c, #183d69);
 }
 
 .super-login-card {
   width: 100%;
-  max-width: 430px;
-  padding: 38px;
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 20px 60px #0004;
+  max-width: 440px;
+  padding: 42px;
+  background: white;
+  border: 1px solid #ffffff30;
+  border-radius: 20px;
+  box-shadow: 0 25px 80px #0005;
 }
 
 .super-logo {
-  width: 55px;
-  height: 55px;
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
-  background: #142b55;
+  background: linear-gradient(135deg, #2563eb, #102747);
   color: white;
-  border-radius: 14px;
-  font-size: 22px;
-  font-weight: bold;
+  border-radius: 15px;
+  font-size: 21px;
+  font-weight: 800;
 }
 
 .super-eyebrow {
   margin-top: 25px;
   color: #64748b;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: 800;
   letter-spacing: 2px;
 }
 
 .super-login-card h1 {
+  margin: 12px 0 8px;
   font-size: 27px;
-  margin-bottom: 8px;
 }
 
 .super-login-card p {
-  color: #64748b;
-  line-height: 1.5;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .super-login-card label {
   display: block;
-  margin-top: 20px;
-  margin-bottom: 7px;
+  margin: 20px 0 8px;
   font-size: 13px;
-  font-weight: bold;
+  font-weight: 700;
 }
 
 .super-login-card input {
   width: 100%;
-  padding: 13px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 15px;
+  padding: 13px 14px;
+  border: 1px solid #d6deea;
+  border-radius: 9px;
+  outline: none;
+}
+
+.super-login-card input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px #2563eb18;
 }
 
 .super-login-card button {
@@ -79,12 +118,14 @@ body {
   margin-top: 25px;
   padding: 14px;
   border: 0;
-  border-radius: 8px;
-  background: #17366c;
+  border-radius: 9px;
+  background: var(--blue);
   color: white;
-  font-size: 15px;
-  font-weight: bold;
-  cursor: pointer;
+  font-weight: 700;
+}
+
+.super-login-card button:hover {
+  background: #1d4ed8;
 }
 
 .super-login-card button:disabled {
@@ -97,70 +138,435 @@ body {
   font-size: 13px;
 }
 
+/* APPLICATION LAYOUT */
+
 .super-app {
   min-height: 100vh;
-}
-
-.super-header {
   display: flex;
-  justify-content: space-between;
+  background: var(--background);
+}
+
+/* SIDEBAR */
+
+.super-sidebar {
+  width: 255px;
+  min-width: 255px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: var(--navy-dark);
+  color: white;
+  padding: 25px 16px 18px;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  display: flex;
   align-items: center;
-  padding: 20px 5%;
-  background: #101b35;
-  color: white;
+  gap: 12px;
+  padding: 0 9px 28px;
+  border-bottom: 1px solid #ffffff18;
 }
 
-.super-header strong {
-  font-size: 22px;
+.sidebar-brand strong {
+  display: block;
+  font-size: 20px;
+  letter-spacing: .3px;
 }
 
-.super-header span {
-  margin-left: 12px;
-  color: #93c5fd;
+.sidebar-brand span {
+  display: block;
+  margin-top: 5px;
+  color: #9db4d1;
+  font-size: 9px;
+  letter-spacing: 1.5px;
 }
 
-.super-header button {
-  padding: 10px 18px;
-  border: 1px solid #64748b;
-  border-radius: 7px;
-  background: transparent;
-  color: white;
+.sidebar-section-title {
+  padding: 23px 12px 10px;
+  color: #829bb9;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.super-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.super-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 13px;
+  border-radius: 9px;
+  color: #c4d2e4;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  transition: .2s ease;
 }
+
+.super-nav-item span {
+  width: 20px;
+  text-align: center;
+  font-size: 17px;
+}
+
+.super-nav-item:hover {
+  color: white;
+  background: #ffffff12;
+}
+
+.super-nav-item.active {
+  color: white;
+  background: #2563eb;
+  box-shadow: 0 5px 15px #0002;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 22px;
+  border-top: 1px solid #ffffff18;
+}
+
+.admin-profile {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px;
+}
+
+.admin-avatar {
+  width: 37px;
+  height: 37px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #315b91;
+  font-weight: 800;
+}
+
+.admin-profile strong,
+.admin-profile span {
+  display: block;
+}
+
+.admin-profile strong {
+  font-size: 13px;
+}
+
+.admin-profile span {
+  margin-top: 4px;
+  color: #91a9c7;
+  font-size: 11px;
+}
+
+.sidebar-bottom button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px;
+  border: 1px solid #ffffff25;
+  border-radius: 8px;
+  background: transparent;
+  color: #dbeafe;
+  text-align: left;
+}
+
+.sidebar-bottom button:hover {
+  background: #ffffff12;
+}
+
+/* MAIN AREA */
+
+.super-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.super-topbar {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 17px 35px;
+  background: white;
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-label {
+  color: #718096;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+}
+
+.super-topbar h2 {
+  margin: 6px 0 0;
+  font-size: 22px;
+  color: var(--navy);
+}
+
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.online-indicator {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 4px #22c55e20;
+}
+
+.super-page-content {
+  flex: 1;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 28px 35px;
+}
+
+/* WELCOME SECTION */
 
 .super-welcome {
-  margin: 35px auto;
-  padding: 30px;
-  max-width: 1100px;
+  max-width: none;
+  margin: 0 0 25px;
+  padding: 28px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid #dce8f8;
+  border-radius: 15px;
+  background: linear-gradient(110deg, #ffffff, #eaf2ff);
 }
 
 .super-welcome p {
-  color: #2563eb;
-  font-size: 12px;
-  font-weight: bold;
-  letter-spacing: 2px;
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
 }
 
 .super-welcome h1 {
-  font-size: 30px;
+  margin: 10px 0;
+  color: var(--navy);
+  font-size: 27px;
 }
+
+.super-welcome span {
+  color: var(--muted);
+}
+
+.welcome-icon {
+  font-size: 55px;
+}
+
+/* CONTENT AREA */
 
 #superAdminContent {
-  max-width: 1100px;
-  margin: auto;
-  padding: 0 30px 40px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 0 35px;
 }
 
-@media (max-width: 600px) {
-  .super-login-card {
-    padding: 25px;
+#superAdminContent h3 {
+  color: var(--navy);
+}
+
+#superAdminContent table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+}
+
+#superAdminContent th,
+#superAdminContent td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+#superAdminContent th {
+  background: #f7f9fc;
+  color: #64748b;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+#superAdminContent tr:hover td {
+  background: #f8fbff;
+}
+
+#superAdminContent button {
+  padding: 9px 13px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--blue);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#superAdminContent button:hover {
+  filter: brightness(.94);
+}
+
+#superAdminContent input,
+#superAdminContent select,
+#superAdminContent textarea {
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d7dfeb;
+  border-radius: 8px;
+  background: white;
+  color: var(--text);
+  outline: none;
+}
+
+#superAdminContent input:focus,
+#superAdminContent select:focus,
+#superAdminContent textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px #2563eb15;
+}
+
+#superAdminContent form {
+  padding: 22px;
+  margin: 18px 0;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+#superAdminContent label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#superAdminContent > div {
+  margin-bottom: 18px;
+}
+
+.super-footer {
+  padding: 18px 35px;
+  border-top: 1px solid var(--border);
+  color: #8290a3;
+  font-size: 11px;
+  text-align: center;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 900px) {
+  .super-sidebar {
+    width: 220px;
+    min-width: 220px;
+  }
+
+  .super-page-content {
+    padding: 22px;
+  }
+
+  .super-topbar {
+    padding: 16px 22px;
+  }
+}
+
+@media (max-width: 650px) {
+  .super-app {
+    display: block;
+  }
+
+  .super-sidebar {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
+    padding: 15px;
+  }
+
+  .sidebar-brand {
+    padding-bottom: 15px;
+  }
+
+  .super-navigation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .sidebar-section-title {
+    grid-column: 1 / -1;
+    padding: 14px 8px 5px;
+  }
+
+  .super-nav-item {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .sidebar-bottom {
+    margin-top: 15px;
+  }
+
+  .super-topbar {
+    min-height: 70px;
+    padding: 14px 16px;
+  }
+
+  .super-topbar h2 {
+    font-size: 18px;
+  }
+
+  .super-page-content {
+    padding: 16px;
+  }
+
+  .super-welcome {
+    padding: 20px;
   }
 
   .super-welcome h1 {
-    font-size: 23px;
+    font-size: 22px;
   }
 
-  .super-header {
-    padding: 16px;
+  .welcome-icon {
+    font-size: 38px;
+  }
+
+  #superAdminContent {
+    overflow-x: auto;
+  }
+
+  #superAdminContent table {
+    min-width: 650px;
+  }
+
+  .super-footer {
+    padding: 15px;
+  }
+
+  .super-login-card {
+    padding: 27px;
   }
 }
