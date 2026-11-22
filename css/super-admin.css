@@ -417,3 +417,213 @@ body {
     font-size: 32px;
   }
 }
+
+
+/* =====================================
+   TERASHIP SUPER ADMIN - DESIGN UPGRADE
+===================================== */
+
+body {
+  background: #f5f7fc;
+  color: #172b4d;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+.super-sidebar {
+  background: linear-gradient(180deg, #101f3b 0%, #172f55 100%);
+  box-shadow: 5px 0 25px rgba(16, 31, 59, 0.08);
+}
+
+.sidebar-brand strong {
+  letter-spacing: -0.5px;
+}
+
+.super-nav-item {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  transition: all .2s ease;
+}
+
+.super-nav-item:hover {
+  background: rgba(255,255,255,.09);
+  transform: translateX(2px);
+}
+
+.super-nav-item.active {
+  background: linear-gradient(110deg, #1764d5, #3185ed);
+  box-shadow: 0 5px 15px rgba(23,100,213,.25);
+}
+
+.super-topbar {
+  min-height: 82px;
+  padding-left: 36px;
+  padding-right: 36px;
+  box-shadow: 0 2px 12px rgba(20,40,80,.03);
+}
+
+.super-topbar h2 {
+  color: #142744;
+  font-weight: 700;
+  letter-spacing: -.4px;
+}
+
+.super-page-content {
+  padding-top: 32px;
+}
+
+.super-welcome {
+  background: linear-gradient(115deg, #142f59, #1764b9, #3489e8);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(23,100,185,.15);
+}
+
+.super-welcome h1 {
+  letter-spacing: -.7px;
+  font-weight: 750;
+}
+
+.super-login-card {
+  border: 1px solid #edf1f7;
+  box-shadow: 0 24px 70px rgba(0,0,0,.18);
+}
+
+/* CONTENT PANELS */
+
+#superAdminContent > div {
+  border-radius: 12px;
+}
+
+#superAdminContent input,
+#superAdminContent select,
+#superAdminContent textarea {
+  padding: 11px 13px;
+  border: 1px solid #dce4ef;
+  border-radius: 9px;
+  background: #fff;
+  color: #172b4d;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+#superAdminContent input:focus,
+#superAdminContent select:focus,
+#superAdminContent textarea:focus {
+  border-color: #3185ed;
+  box-shadow: 0 0 0 3px rgba(49,133,237,.12);
+}
+
+/* BUTTONS */
+
+#superAdminContent button {
+  padding: 9px 15px;
+  border: 0;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s, opacity .15s;
+}
+
+#superAdminContent button:hover {
+  opacity: .94;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(20,40,80,.12);
+}
+
+#superAdminContent button:active {
+  transform: translateY(0);
+}
+
+/* TABLES */
+
+#superAdminContent table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border: 1px solid #e8edf5;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#superAdminContent table th {
+  padding: 14px 13px;
+  background: #f3f6fb;
+  color: #52647d;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+#superAdminContent table td {
+  padding: 13px;
+  border-top: 1px solid #edf1f6;
+  color: #344762;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+#superAdminContent table tbody tr:hover {
+  background: #f8faff;
+}
+
+/* SCROLL WIDE TABLES ON SMALL SCREENS */
+
+#superAdminContent {
+  overflow-x: auto;
+}
+
+#superAdminContent table {
+  min-width: 650px;
+}
+
+/* FOOTER */
+
+.super-footer {
+  background: #fff;
+  color: #8795a9;
+}
+
+/* RESPONSIVE IMPROVEMENTS */
+
+@media (max-width: 800px) {
+  .super-sidebar {
+    box-shadow: 0 4px 15px rgba(16,31,59,.12);
+  }
+
+  .super-navigation {
+    gap: 7px;
+  }
+
+  .super-nav-item {
+    border-radius: 8px;
+  }
+
+  .super-topbar {
+    min-height: 68px;
+    padding: 12px 16px;
+  }
+
+  .super-page-content {
+    padding: 18px 14px;
+  }
+
+  .super-welcome {
+    border-radius: 13px;
+  }
+}
+
+@media (max-width: 450px) {
+  .super-welcome {
+    gap: 10px;
+  }
+
+  .super-welcome h1 {
+    font-size: 19px;
+  }
+
+  .super-login-card {
+    padding: 25px;
+  }
+}
+
